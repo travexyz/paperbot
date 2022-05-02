@@ -1,0 +1,15 @@
+{
+    "token": "5288793038:AAH9EY4WXow53z6fNva4FxYjzKcM34dfmQo",
+    "payment": {
+        "user": "@AnonHexo",
+        "link": "https://paypal.me/PaperPayments"
+    },
+    "admins": [
+        "304506948",
+        "1062204008"
+    ],
+    "channel": {
+        "link": "https://t.me/Papercc",
+        "id": "-1001194103735"
+    }
+}
