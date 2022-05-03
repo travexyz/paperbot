@@ -9,6 +9,7 @@
   "author": "AnonHexo",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^16.0.0",
     "fs": "^0.0.1-security",
     "telegraf": "^4.8.1"
   },
