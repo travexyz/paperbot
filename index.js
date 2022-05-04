@@ -9,6 +9,15 @@ var bans = require('./json/bans.json')
 var balances = require('./json/balances.json')
 var accounts = require('./json/accounts.json')
 var methods = require('./json/methods.json')
+
+// #region DUMMY SERVER
+const express = require('express')
+const PORT = process.env.PORT || 5000
+express()
+    .get('/', (req, res) => res.send('Hello World!'))
+    .listen(PORT, () => {})
+// #endregion
+
 // #endregion
 // #region TELEGRAF CONFIGURATION
 const {
