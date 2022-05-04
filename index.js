@@ -4,7 +4,7 @@ require('dotenv').config()
 
 // #region APP CONFIGURATION
 var devMode = false
-const config = require('./json/config.json')
+var config = require('./json/config.json')
 var bans = require('./json/bans.json')
 var balances = require('./json/balances.json')
 var accounts = require('./json/accounts.json')
@@ -85,10 +85,13 @@ function processAccountPayment(Name, Price, Context) {
     Context.telegram.sendMessage(Context.chat.id, `<b>Paper Bot | ${Name.charAt(0).toUpperCase() + Name.slice(1)} Account</b>\n\n<b>✅ Credentials: </b><code>${accounts[Name].available[index]}</code>\n\n<b>🗒️ Recipt: </b> <code>${recipt}</code>`, {
         parse_mode: 'HTML'
     })
-    Broadcast(`✅ <b>New Account Purchase!</b>\n<b>👤 Customer:</b> <a href="tg://user?id=${Context.from.id}">@${Context.from.username}</a> (${Context.from.id})\n<b>📩 Product:</b> ${Name.charAt(0).toUpperCase() + Name.slice(1)} Account\n<b>💲 Price:</b> <code>${Price}</code>\n<b>📆 Date timestamp:</b> <code>${+ Date.now()}</code>\n<b>🗒️ Recipt: </b> <code>${recipt}</code>`)
+    Broadcast(`✅ <b>New Account Purchase!</b>\n<b>👤 Customer:</b> <a href="tg://user?id=${Context.from.id}">@${Context.from.username}</a> (${Context.from.id})\n<b>📩 Product:</b> ${Name.charAt(0).toUpperCase() + Name.slice(1)} Account (<code>${accounts[Name].available[index]}</code>)\n<b>💲 Price:</b> <code>${Price}</code>\n<b>📆 Date timestamp:</b> <code>${+ Date.now()}</code>\n<b>🗒️ Recipt: </b> <code>${recipt}</code>`)
+    accounts[Name].used.push(accounts[Name].available[index])
+    accounts[Name].available.splice(index, 1)
+    fs.writeFile("./json/accounts.json", JSON.stringify(accounts), _ => {})
 }
 
-function processMethodPayment(Name, Price, Context) {
+/* function processMethodPayment(Name, Price, Context) {
     if (methods[Name].available) return Context.answerCbQuery(`${Name.charAt(0).toUpperCase() + Name.slice(1)} method is not available.`, {
         show_alert: true
     })
@@ -103,7 +106,7 @@ function processMethodPayment(Name, Price, Context) {
         parse_mode: 'HTML'
     })
     Broadcast(`✅ <b>New Method Purchase!</b>\n<b>👤 Customer:</b> <a href="tg://user?id=${Context.from.id}">${Context.from.username}</a> (${Context.from.id})\n<b>📩 Product:</b> ${Name.charAt(0).toUpperCase() + Name.slice(1)} Account\n<b>💲 Price:</b> <code>${Price}</code>\n<b>📆 Date timestamp:</b> <code>${+ Date.now()}</code>\n<b>🗒️ Recipt: </b> <code>${recipt}</code>`)
-}
+} */
 
 function Refresh(ConfigPath = "./json/config.json", BansPath = "./json/bans.json", BalancesPath = "./json/balances.json", AccountsPath = "./json/accounts.json") {
     fs.readFile(ConfigPath, 'utf8', (err, data) => {
@@ -445,19 +448,21 @@ telegram.action('accounts', async (Context) => {
         reply_markup: {
             inline_keyboard: [
                 [{
-                    text: `Netflix (${accounts.netflix.length})`,
+                    text: `Netflix (${accounts.netflix.available.length})`,
                     callback_data: 'buyNetflixAccount'
                 }, {
-                    text: `Spotify (${accounts.spotify.length})`,
+                    text: `Spotify (${accounts.spotify.available.length})`,
                     callback_data: 'buySpotifyAccount'
-                }, {
-                    text: `NordVPN (${accounts.nordvpn.length})`,
+                }],
+                [{
+                    text: `NordVPN (${accounts.nordvpn.available.length})`,
                     callback_data: 'buyNordVPNAccount'
                 }, {
-                    text: `Disney+ (${accounts.disney.length})`,
+                    text: `Disney+ (${accounts.disney.available.length})`,
                     callback_data: 'buyDisneyAccount'
-                }, {
-                    text: `PrimeVideo (${accounts.primevideo.length})`,
+                }],
+                [{
+                    text: `PrimeVideo (${accounts.primevideo.available.length})`,
                     callback_data: 'buyPrimeVideoAccount'
                 }],
                 [{
@@ -490,7 +495,7 @@ telegram.action('scripts', async (Context) => {
 telegram.action('buyNetflixAccount', async (Context) => {
     if (!await checks(Context)) return
 
-    Context.editMessageText(`<b>Paper Bot | Netflix Account</b>\n\n<i>Premium cracked Netflix account.</i>\n<b>💰 Price: 0,50€</b>\n<b>♻️ Stock: ${accounts.netflix.length}</b>`, {
+    Context.editMessageText(`<b>Paper Bot | Netflix Account</b>\n\n<i>Premium cracked Netflix account.</i>\n<b>💰 Price: 0,50€</b>\n<b>♻️ Stock: ${accounts.netflix.available.length}</b>`, {
         parse_mode: 'HTML',
         reply_markup: {
             inline_keyboard: [
@@ -511,7 +516,7 @@ telegram.action('buyNetflixAccount', async (Context) => {
 telegram.action('buySpotifyAccount', async (Context) => {
     if (!await checks(Context)) return
 
-    Context.editMessageText(`<b>Paper Bot | Spotify Account</b>\n\n<i>Premium cracked Spotify account.</i>\n<b>💰 Price: 0,50€</b>\n<b>♻️ Stock: ${accounts.spotify.length}</b>`, {
+    Context.editMessageText(`<b>Paper Bot | Spotify Account</b>\n\n<i>Premium cracked Spotify account.</i>\n<b>💰 Price: 0,50€</b>\n<b>♻️ Stock: ${accounts.spotify.available.length}</b>`, {
         parse_mode: 'HTML',
         reply_markup: {
             inline_keyboard: [
@@ -532,7 +537,7 @@ telegram.action('buySpotifyAccount', async (Context) => {
 telegram.action('buyNordVPNAccount', async (Context) => {
     if (!await checks(Context)) return
 
-    Context.editMessageText(`<b>Paper Bot | NordVPN Account</b>\n\n<i>Premium cracked NordVPN account.</i>\n<b>💰 Price: 0,50€</b>\n<b>♻️ Stock: ${accounts.nordvpn.length}</b>`, {
+    Context.editMessageText(`<b>Paper Bot | NordVPN Account</b>\n\n<i>Premium cracked NordVPN account.</i>\n<b>💰 Price: 0,50€</b>\n<b>♻️ Stock: ${accounts.nordvpn.available.length}</b>`, {
         parse_mode: 'HTML',
         reply_markup: {
             inline_keyboard: [
@@ -553,7 +558,7 @@ telegram.action('buyNordVPNAccount', async (Context) => {
 telegram.action('buyDisneyAccount', async (Context) => {
     if (!await checks(Context)) return
 
-    Context.editMessageText(`<b>Paper Bot | Disney+ Account</b>\n\n<i>Premium cracked Disney+ account.</i>\n<b>💰 Price: 0,50€</b>\n<b>♻️ Stock: ${accounts.disney.length}</b>`, {
+    Context.editMessageText(`<b>Paper Bot | Disney+ Account</b>\n\n<i>Premium cracked Disney+ account.</i>\n<b>💰 Price: 0,50€</b>\n<b>♻️ Stock: ${accounts.disney.available.length}</b>`, {
         parse_mode: 'HTML',
         reply_markup: {
             inline_keyboard: [
@@ -574,7 +579,7 @@ telegram.action('buyDisneyAccount', async (Context) => {
 telegram.action('buyPrimeVideoAccount', async (Context) => {
     if (!await checks(Context)) return
 
-    Context.editMessageText(`<b>Paper Bot | PrimeVideo Account</b>\n\n<i>Premium cracked PrimeVideo account.</i>\n<b>💰 Price: 0,50€</b>\n<b>♻️ Stock: ${accounts.primevideo.length}</b>`, {
+    Context.editMessageText(`<b>Paper Bot | PrimeVideo Account</b>\n\n<i>Premium cracked PrimeVideo account.</i>\n<b>💰 Price: 0,50€</b>\n<b>♻️ Stock: ${accounts.primevideo.available.length}</b>`, {
         parse_mode: 'HTML',
         reply_markup: {
             inline_keyboard: [
@@ -609,7 +614,7 @@ telegram.action('processDisneyAccount', async (Context) => {
     if (!await checks(Context)) return
     processAccountPayment("disney", 0.50, Context)
 })
-telegram.action('processPriveVideo', async (Context) => {
+telegram.action('processPrimeVideoAccount', async (Context) => {
     if (!await checks(Context)) return
     processAccountPayment("primevideo", 0.50, Context)
 })
@@ -731,7 +736,7 @@ telegram.command('addAccount', async (Context) => {
 
     if (accounts[args[1]]) {
         if (!args[2]) return Context.reply("Incorrect syntax. Syntax is: /addAccount <service> <user:password>")
-        accounts[args[1]].push(args[2])
+        accounts[args[1]].available.push(args[2])
         fs.writeFile("./json/accounts.json", JSON.stringify(accounts), _ => {})
         Context.reply("Done!")
     } else {
