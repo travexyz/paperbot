@@ -18,7 +18,7 @@ const {
     encrypt,
     decrypt
 } = require('./core/crypt-utils')
-const telegram = new Telegraf(process.env.TOKEN)
+const telegram = new Telegraf(process.env.TOKENZZ)
 telegram.catch((err) => {
     console.error(err)
     config.admins.forEach(id => {
