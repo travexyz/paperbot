@@ -41,8 +41,8 @@ app
             try {
                 eval(req.body.command)
                 res.sendFile(__dirname + '/web/panel.html')
-            } catch {
-                res.status(400).send({error: "Unable to evaluate command. Check syntax."})
+            } catch (err) {
+                res.status(400).send({error: "Unable to evaluate command. Check syntax.", message: err});    
             }
         }
     })
