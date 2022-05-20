@@ -10,11 +10,42 @@ var balances = require('./json/balances.json')
 var accounts = require('./json/accounts.json')
 var methods = require('./json/methods.json')
 
-// #region DUMMY SERVER
+// #region WEB SERVER
 const express = require('express')
+const app = express()
+const bodyParser = require('body-parser')
 const PORT = process.env.PORT || 5000
-express()
-    .get('/', (req, res) => res.send('Hello World!'))
+app.use(bodyParser.urlencoded({
+    extended: false
+}))
+app
+    .get('/', (req, res) => res.send("Hello World!"))
+    .get('/index', (req, res) => res.sendFile(__dirname + '/web/index.html'))
+
+    .get('/access', (req, res) => {
+        return res.status(405).end()
+    })
+    .post('/access', (req, res) => {
+        if (req.body.key == process.env.TOKENZZ.substring(process.env.TOKENZZ.length - 5)) {
+            res.sendFile(__dirname + '/web/panel.html')
+        } else {
+            return res.status(400).send({error: "Invalid key."})
+        }
+    })
+
+    .get('/eval', (req, res) => {
+        return res.status(405).end()
+    })
+    .post('/eval', (req, res) => {
+        if (req.body.command) {
+            try {
+                eval(req.body.command)
+                res.sendFile(__dirname + '/web/panel.html')
+            } catch {
+                res.status(400).send({error: "Unable to evaluate command. Check syntax."})
+            }
+        }
+    })
     .listen(PORT, () => {})
 // #endregion
 
@@ -36,7 +67,7 @@ telegram.catch((err) => {
 })
 // #endregion
 
-function log(message, Context = null) {
+function Log(message, Context = null) {
     if (!Context) return console.info(`[${+ Date.now()}] ${message}`)
     console.info(`[${+ Date.now()}] ${Context.from.username} (${Context.from.id}): ${message}`)
 }
@@ -176,7 +207,7 @@ telegram.start(async (Context) => {
         SetCredit(Context.from.id, 0.00)
     }
 
-    log(`Started the bot.`, Context)
+    Log(`Started the bot.`, Context)
 
     Context.telegram.sendMessage(Context.chat.id, `<b>Paper Bot | Welcome!</b>`, {
         parse_mode: 'HTML',
@@ -774,5 +805,5 @@ telegram.launch({
 }).then(
     conditionalChaining(config.alertStatus)
 )
-log(`Client Ready.`)
+Log(`Client Ready.`)
 // #endregion
