@@ -6,9 +6,16 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        form {
-            padding: 10% 0;
+        .container {
             text-align: center;
+        }
+
+        #editor {
+            position: relative;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
         }
     </style>
     <title>PaperBot - Welcome</title>
@@ -16,12 +23,30 @@
 
 <body>
     <form action="/eval" method="post">
-        <label for="command">
-            Command: <input type="text" name="command">
-        </label>
-            <br> <br>
-        <input type="submit" value="Eval">
+        <div id="editor"></div>
+        <input name="command" id="command" style="display: none;">
+        <br> <br>
+        <div class="container">
+            <input id="eval-btn" type="submit" value="Eval">
+        </div>
     </form>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.5/ace.js" type="text/javascript" charset="utf-8">
+    </script>
+    <script>
+        var editor = ace.edit("editor", {
+            theme: "ace/theme/chrome",
+            mode: "ace/mode/javascript",
+            maxLines: 30,
+            wrap: true,
+            autoScrollEditorIntoView: true
+        })
+
+        const inputArea = document.getElementById("command")
+        editor.getSession().on("change", function () {
+            inputArea.value = editor.getSession().getValue()
+        })
+    </script>
 </body>
 
 </html>

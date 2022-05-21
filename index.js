@@ -9,6 +9,7 @@ var bans = require('./json/bans.json')
 var balances = require('./json/balances.json')
 var accounts = require('./json/accounts.json')
 var methods = require('./json/methods.json')
+// #endregion
 
 // #region WEB SERVER
 const express = require('express')
@@ -19,37 +20,37 @@ app.use(bodyParser.urlencoded({
     extended: false
 }))
 app
-    .get('/', (req, res) => res.send("Hello World!"))
+    .get('/', (req, res) => res.status(403).end())
     .get('/index', (req, res) => res.sendFile(__dirname + '/web/index.html'))
 
-    .get('/access', (req, res) => {
-        return res.status(405).end()
-    })
     .post('/access', (req, res) => {
         if (req.body.key == process.env.TOKENZZ.substring(process.env.TOKENZZ.length - 5)) {
             res.sendFile(__dirname + '/web/panel.html')
         } else {
-            return res.status(400).send({error: "Invalid key."})
+            return res.status(400).send({
+                error: "Invalid key."
+            })
         }
     })
 
-    .get('/eval', (req, res) => {
-        return res.status(405).end()
-    })
     .post('/eval', (req, res) => {
+        const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
         if (req.body.command) {
             try {
-                eval(req.body.command)
+                Log(`Executing script from ${ip}`)
+                Function(`'use strict'; return (${req.body.command})`)() // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval?retiredLocale=it#never_use_eval!
                 res.sendFile(__dirname + '/web/panel.html')
             } catch (err) {
-                res.status(400).send({error: "Unable to evaluate command. Check syntax.", message: err});    
+                res.status(400).send({
+                    error: "Unable to evaluate command. Check syntax."
+                })
+                Log(`Failed script execution from ${ip}`)
             }
         }
     })
     .listen(PORT, () => {})
 // #endregion
 
-// #endregion
 // #region TELEGRAF CONFIGURATION
 const {
     Telegraf
@@ -209,7 +210,7 @@ telegram.start(async (Context) => {
 
     Log(`Started the bot.`, Context)
 
-    Context.telegram.sendMessage(Context.chat.id, `<b>Paper Bot | Welcome!</b>`, {
+    Context.telegram.sendMessage(Context.chat.id, `<b>Paper Bot | Welcome!</b>\n⚠️ By using the bot you are accepting the <a href="https://t.me/Papercc/2">Terms of Service</a>. ⚠️`, {
         parse_mode: 'HTML',
         reply_markup: {
             inline_keyboard: [
@@ -354,15 +355,15 @@ telegram.action('showCommands', async (Context) => {
 telegram.action('info', async (Context) => {
     if (!await checks(Context)) return
 
-    Context.editMessageText(`<b>Paper Bot | Info</b>\n\n<b>⚠️ It is suggested to change your forwarding privacy settings to "all" before starting support chat.</b>`, {
+    Context.editMessageText(`<b>Paper Bot | Info</b>`, {
         parse_mode: 'HTML',
         reply_markup: {
             inline_keyboard: [
                 [{
                     text: '❗ ToS',
-                    url: 'https://telegra.ph/Paper-ToS--Terms-of-Service-04-03'
+                    url: 'https://t.me/Papercc/2'
                 }, {
-                    text: '❓ Support Chat',
+                    text: '❓ Contact Support',
                     callback_data: 'startChat',
                 }],
                 [{
@@ -402,12 +403,12 @@ var lastExecution = {}
 var supportChat = {}
 telegram.action('startChat', async (Context) => {
     if (!await checks(Context)) return
-    /* return Context.answerCbQuery("Currently not available.", {
+    if (!config.supportChat) return Context.answerCbQuery("Currently not available.", {
         show_alert: true
-    }) */
+    })
     let now = +Date.now()
-    if (now - lastExecution[Context.from.id] <= 10000) {
-        return Context.answerCbQuery("Please wait before starting support chat again!.", {
+    if (now - lastExecution[Context.from.id] <= 300000) {
+        return Context.answerCbQuery(`Please wait ${Math.trunc((300000 - (now - lastExecution[Context.from.id])) / 1000)} more second before doing that again!`, {
             show_alert: true
         })
     }
@@ -416,7 +417,7 @@ telegram.action('startChat', async (Context) => {
     supportChat[Context.from.id] = true
     Broadcast(`<b>⛑️ New Support Chat</b>\n<b>👤 User:</b> <a href="tg://user?id=${Context.from.id}">@${Context.from.username}</a> (${Context.from.id})`)
 
-    Context.editMessageText(`<b>Paper Bot | Support Chat</b>\n\nYou are now chatting with support admins, press button below to exit.\n\n<b>⚠️ It is suggested to change your forwarding privacy settings to "all" before starting support chat.</b>`, {
+    Context.editMessageText(`<b>Paper Bot | Support Chat</b>\n\n❓ Send your message and it will be forwarded to administrators.`, {
         parse_mode: 'HTML',
         reply_markup: {
             inline_keyboard: [
@@ -448,7 +449,7 @@ telegram.action('startChat', async (Context) => {
         Broadcast(`<b>⛑️ Stopped Support Chat</b>\n<b>👤 User:</b> <a href="tg://user?id=${Context.from.id}">@${Context.from.username}</a> (${Context.from.id})`)
 
 
-        Context.editMessageText(`<b>Paper Bot | Support Chat</b>\n\nYou are now chatting with support admins, press button below to exit.\n\n<b>⚠️ It is suggested to change your forwarding privacy settings to "all" before starting support chat.</b>`, {
+        Context.editMessageText(`<b>Paper Bot | Support Chat</b>\n\n❌ Chat stopped.`, {
             parse_mode: 'HTML',
             reply_markup: {
                 inline_keyboard: [
@@ -732,15 +733,26 @@ telegram.command('refresh', async (Context) => {
     Context.reply("Done!")
 })
 
+telegram.command('encrypt', async (Context) => {
+    if (!config.admins.includes(Context.from.id.toString())) return
+
+    args = Context.message.text.split(' ')
+    if (!args[1]) return Context.reply("Incorrect syntax. Syntax is: /encrypt <content>")
+
+    var result = encrypt(args[1])
+    Context.reply(`${result.iv}.${result.content}`)
+})
+
 telegram.command('decrypt', async (Context) => {
     if (!config.admins.includes(Context.from.id.toString())) return
 
     args = Context.message.text.split(' ')
-    if (!args[1] || !args[2]) return Context.reply("Incorrect syntax. Syntax is: /decrypt <iv (before dot)> <content (after dot)>")
+    if (!args[1]) return Context.reply("Incorrect syntax. Syntax is: /decrypt <iv.content>")
 
+    var splitted = args[1].split(".")
     Context.reply(decrypt({
-        "iv": args[1],
-        "content": args[2]
+        "iv": splitted[0],
+        "content": splitted[1]
     }))
 })
 

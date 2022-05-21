@@ -2,6 +2,7 @@
     "bot" : {
         "id": ""
     },
+    "supportChat": true,
     "payment": {
         "user": "@AnonHexo",
         "link": "https://paypal.me/PaperPayments"
