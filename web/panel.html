@@ -25,11 +25,47 @@
     <form action="/eval" method="post">
         <div id="editor"></div>
         <input name="command" id="command" style="display: none;">
-        <br> <br>
+        <br>
         <div class="container">
             <input id="eval-btn" type="submit" value="Eval">
         </div>
     </form>
+
+    <br> <br>
+
+    <form action="/broadcast" method="post">
+        <div class="container">
+            <label for="message">
+                Message: <input type="text" name="message">
+            </label>
+            <input type="submit" name="broadcast" value="Broadcast to Admins" />
+        </div>
+    </form>
+
+    <br>
+
+    <form action="/setcredit" method="post">
+        <div class="container">
+            <label for="id">
+                User ID: <input type="number" name="id">
+            </label>
+            <label for="credit">
+                Credit: <input type="number" name="credit">
+            </label>
+            <input type="submit" name="setcredit" value="Set Credit" />
+        </div>
+    </form>
+
+    <br>
+
+    <form action="/devmode" method="post">
+        <div class="container">
+            <input type="submit" name="devmode" value="Toggle DevMode" />
+        </div>
+    </form>
+
+    <br>
+
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.5/ace.js" type="text/javascript" charset="utf-8">
     </script>

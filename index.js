@@ -28,6 +28,7 @@ app
             res.sendFile(__dirname + '/web/panel.html')
         } else {
             return res.status(400).send({
+                status: 'error',
                 error: "Invalid key."
             })
         }
@@ -42,12 +43,60 @@ app
                 res.sendFile(__dirname + '/web/panel.html')
             } catch (err) {
                 res.status(400).send({
+                    status: 'error',
                     error: "Unable to evaluate command. Check syntax."
                 })
                 Log(`Failed script execution from ${ip}`)
             }
         }
+        setTimeout(() => {
+            res.sendFile(__dirname + '/web/panel.html')
+        }, 3000)
     })
+
+    .post('/broadcast', (req, res) => {
+        if (req.body.message) {
+            try {
+                Broadcast(req.body.message)
+            } catch (err) {
+                res.status(400).send({
+                    status: 'error',
+                    error: "Unable to broadcast."
+                })
+            }
+        }
+        setTimeout(() => {
+            res.sendFile(__dirname + '/web/panel.html')
+        }, 3000)
+    })
+
+    .post('/setcredit', (req, res) => {
+        if (req.body.id && req.body.credit) {
+            SetCredit(req.body.id, req.body.credit)
+        }
+        setTimeout(() => {
+            res.sendFile(__dirname + '/web/panel.html')
+        }, 3000)
+    })
+
+    .post('/devmode', (req, res) => {
+        devMode = !devMode
+        if (devMode) {
+            res.send({
+                status: 'ok',
+                message: "Bot is now accesible only to admins."
+            })
+        } else {
+            res.send({
+                status: 'ok',
+                message: "Bot is now accesible to everyone."
+            })
+        }
+        setTimeout(() => {
+            res.sendFile(__dirname + '/web/panel.html')
+        }, 3000)
+    })
+
     .listen(PORT, () => {})
 // #endregion
 
@@ -166,31 +215,57 @@ function Refresh(ConfigPath = "./json/config.json", BansPath = "./json/bans.json
 // #endregion
 // #region ADMIN FUNCTIONS
 function SetCredit(userId, amount) {
+    if (!typeof userId == Number && !typeof amount == Number) return new Error("Invalid data.")
     balances[userId] = amount
-    fs.writeFile("./json/balances.json", JSON.stringify(balances), _ => {})
+    fs.writeFile("./json/balances.json", JSON.stringify(balances), () => {})
 }
 
 function AddCredit(userId, amount) {
+    if (!typeof userId == Number && !typeof amount == Number) return new Error("Invalid data.")
+    try {
+        telegram.telegram.getChat(userId)
+    } catch (TelegramError) {
+        return new Error("Invalid user.")
+    }
     balances[userId] += amount
     fs.writeFile("./json/balances.json", JSON.stringify(balances), _ => {})
 }
 
 function RemoveCredit(userId, amount) {
+    if (!typeof userId == Number && !typeof amount == Number) return new Error("Invalid data.")
+    try {
+        telegram.telegram.getChat(userId)
+    } catch (TelegramError) {
+        return new Error("Invalid user.")
+    }
     balances[userId] -= amount
     fs.writeFile("./json/balances.json", JSON.stringify(balances), _ => {})
 }
 
 function BanUser(userId) {
+    if (!typeof userId == Number) return new Error("Invalid data.")
+    try {
+        telegram.telegram.getChat(userId)
+    } catch (TelegramError) {
+        return new Error("Invalid user.")
+    }
     bans.push(userId)
     fs.writeFile("./json/bans.json", JSON.stringify(bans), _ => {})
 }
 
 function UnbanUser(userId) {
+    if (!typeof userId == Number) return new Error("Invalid data.")
+    try {
+        telegram.telegram.getChat(userId)
+    } catch (TelegramError) {
+        return new Error("Invalid user.")
+    }
     bans.splice(bans.indexOf(userId), 1)
     fs.writeFile("./json/bans.json", JSON.stringify(bans), _ => {})
 }
 
 function Broadcast(message) {
+    if (!typeof message == String) return new Error("Invalid data.")
     config.admins.forEach(id => {
         telegram.telegram.sendMessage(id, message, {
             parse_mode: 'HTML'
@@ -417,7 +492,7 @@ telegram.action('startChat', async (Context) => {
     supportChat[Context.from.id] = true
     Broadcast(`<b>⛑️ New Support Chat</b>\n<b>👤 User:</b> <a href="tg://user?id=${Context.from.id}">@${Context.from.username}</a> (${Context.from.id})`)
 
-    Context.editMessageText(`<b>Paper Bot | Support Chat</b>\n\n❓ Send your message and it will be forwarded to administrators.`, {
+    Context.editMessageText(`<b>Paper Bot | Support Chat</b>\n\n❓ Send your message and it will be forwarded to administrators.\n✅`, {
         parse_mode: 'HTML',
         reply_markup: {
             inline_keyboard: [
@@ -449,7 +524,7 @@ telegram.action('startChat', async (Context) => {
         Broadcast(`<b>⛑️ Stopped Support Chat</b>\n<b>👤 User:</b> <a href="tg://user?id=${Context.from.id}">@${Context.from.username}</a> (${Context.from.id})`)
 
 
-        Context.editMessageText(`<b>Paper Bot | Support Chat</b>\n\n❌ Chat stopped.`, {
+        Context.editMessageText(`<b>Paper Bot | Support Chat</b>\n\n❓ Send your message and it will be forwarded to administrators.\n❌`, {
             parse_mode: 'HTML',
             reply_markup: {
                 inline_keyboard: [
