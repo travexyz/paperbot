@@ -1,896 +1,195 @@
-console.clear()
-const fs = require('fs')
+// #region Envoirment Configuation
 require('dotenv').config()
-
-// #region APP CONFIGURATION
-var devMode = false
-var config = require('./json/config.json')
-var bans = require('./json/bans.json')
-var balances = require('./json/balances.json')
-var accounts = require('./json/accounts.json')
-var methods = require('./json/methods.json')
+const { writeFileSync } = require('fs')
+const Config = require("./config/config.json")
+const Products = require("./config/products.json")
+const Users = require("./config/users.json")
 // #endregion
 
-// #region WEB SERVER
-const express = require('express')
-const app = express()
-const bodyParser = require('body-parser')
-const PORT = process.env.PORT || 5000
-app.use(bodyParser.urlencoded({
-    extended: false
-}))
-app
-    .get('/', (req, res) => res.status(403).end())
-    .get('/index', (req, res) => res.sendFile(__dirname + '/web/index.html'))
-
-    .post('/access', (req, res) => {
-        if (req.body.key == process.env.TOKENZZ.substring(process.env.TOKENZZ.length - 5)) {
-            res.sendFile(__dirname + '/web/panel.html')
-        } else {
-            return res.status(400).send({
-                status: 'error',
-                error: "Invalid key."
-            })
-        }
-    })
-
-    .post('/eval', (req, res) => {
-        const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
-        if (req.body.command) {
-            try {
-                Log(`Executing script from ${ip}`)
-                Function(`'use strict'; return (${req.body.command})`)() // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval?retiredLocale=it#never_use_eval!
-                res.sendFile(__dirname + '/web/panel.html')
-            } catch (err) {
-                res.status(400).send({
-                    status: 'error',
-                    error: "Unable to evaluate command. Check syntax."
-                })
-                Log(`Failed script execution from ${ip}`)
-            }
-        }
-        setTimeout(() => {
-            res.sendFile(__dirname + '/web/panel.html')
-        }, 3000)
-    })
-
-    .post('/broadcast', (req, res) => {
-        if (req.body.message) {
-            try {
-                Broadcast(req.body.message)
-            } catch (err) {
-                res.status(400).send({
-                    status: 'error',
-                    error: "Unable to broadcast."
-                })
-            }
-        }
-        setTimeout(() => {
-            res.sendFile(__dirname + '/web/panel.html')
-        }, 3000)
-    })
-
-    .post('/setcredit', (req, res) => {
-        if (req.body.id && req.body.credit) {
-            SetCredit(req.body.id, req.body.credit)
-        }
-        setTimeout(() => {
-            res.sendFile(__dirname + '/web/panel.html')
-        }, 3000)
-    })
-
-    .post('/devmode', (req, res) => {
-        devMode = !devMode
-        if (devMode) {
-            res.send({
-                status: 'ok',
-                message: "Bot is now accesible only to admins."
-            })
-        } else {
-            res.send({
-                status: 'ok',
-                message: "Bot is now accesible to everyone."
-            })
-        }
-        setTimeout(() => {
-            res.sendFile(__dirname + '/web/panel.html')
-        }, 3000)
-    })
-
-    .listen(PORT, () => {})
-// #endregion
-
-// #region TELEGRAF CONFIGURATION
+// #region Bot Configuration
 const {
-    Telegraf
-} = require('telegraf');
-const {
-    encrypt,
-    decrypt
-} = require('./core/crypt-utils')
-const telegram = new Telegraf(process.env.TOKENZZ)
-telegram.catch((err) => {
+    Telegraf, Markup, Context
+} = require('telegraf')
+
+const client = new Telegraf(process.env.TOKEN)
+client.catch((err) => {
     console.error(err)
-    config.admins.forEach(id => {
-        telegram.telegram.sendMessage(id, "ERROR: Check logs!")
+    Config.administrators.forEach(id => {
+        client.telegram.sendMessage(id, `Error Occurred: \`\`\`${err}\`\`\``, { parse_mode: "MarkdownV2" })
     })
 })
 // #endregion
 
-function Log(message, Context = null) {
-    if (!Context) return console.info(`[${+ Date.now()}] ${message}`)
-    console.info(`[${+ Date.now()}] ${Context.from.username} (${Context.from.id}): ${message}`)
+// #region Start Command
+const updateLocal = _ => {
+    writeFileSync("./config/config.json", JSON.stringify(Config))
+    writeFileSync("./config/products.json", JSON.stringify(Products))
+    writeFileSync("./config/users.json", JSON.stringify(Users))
 }
-// #region BOT FUNCTIONS
-async function checks(Context) {
-    if (devMode) {
-        if (config.admins.includes(Context.from.id.toString())) return true
-        return false
-    }
-    if (bans.includes(Context.chat.id)) return false
+client.start(async (Context) => {
+    if (Config.bans.includes(Context.chat.id)) return
 
-    var raw = await telegram.telegram.getChatMember(config.channel.id, Context.from.id)
+    updateLocal()
 
-    if (raw.status == "left") {
-        Context.deleteMessage()
-        Context.telegram.sendMessage(Context.chat.id, `<b>Paper Bot | Warning</b>\n\n<i>You must join the linked channel to start using the bot!</i>`, {
-            parse_mode: 'HTML',
-            reply_markup: {
-                inline_keyboard: [
-                    [{
-                        text: '📣 Join Channel',
-                        url: config.channel.link
-                    }, {
-                        text: '🔓 Proceed',
-                        callback_data: 'main'
-                    }]
-                ]
-            }
-        })
-        return false
-    }
-    return true
-}
-
-function createRecipt(Context) {
-    var id = Context.chat.id
-    var date = +Date.now()
-    var uniqueCode = encrypt(`${Context.from.username}.${id}.${date}`)
-
-    return `${uniqueCode.iv}.${uniqueCode.content}`
-}
-
-function processAccountPayment(Name, Price, Context) {
-    if (accounts[Name].available.length <= 0) return Context.answerCbQuery(`${Name.charAt(0).toUpperCase() + Name.slice(1)} accounts are out of stock.`, {
-        show_alert: true
-    })
-    if (balances[Context.chat.id.toString()] < Price) return Context.answerCbQuery("You don't have enough money on your balance.", {
-        show_alert: true
-    })
-
-    RemoveCredit(Context.chat.id, Price)
-
-    var index = Math.floor(Math.random() * accounts[Name].available.length)
-    var recipt = createRecipt(Context)
-    Context.telegram.sendMessage(Context.chat.id, `<b>Paper Bot | ${Name.charAt(0).toUpperCase() + Name.slice(1)} Account</b>\n\n<b>✅ Credentials: </b><code>${accounts[Name].available[index]}</code>\n\n<b>🗒️ Recipt: </b> <code>${recipt}</code>`, {
-        parse_mode: 'HTML'
-    })
-    Broadcast(`✅ <b>New Account Purchase!</b>\n<b>👤 Customer:</b> <a href="tg://user?id=${Context.from.id}">@${Context.from.username}</a> (${Context.from.id})\n<b>📩 Product:</b> ${Name.charAt(0).toUpperCase() + Name.slice(1)} Account (<code>${accounts[Name].available[index]}</code>)\n<b>💲 Price:</b> <code>${Price}</code>\n<b>📆 Date timestamp:</b> <code>${+ Date.now()}</code>\n<b>🗒️ Recipt: </b> <code>${recipt}</code>`)
-    accounts[Name].used.push(accounts[Name].available[index])
-    accounts[Name].available.splice(index, 1)
-    fs.writeFile("./json/accounts.json", JSON.stringify(accounts), _ => {})
-}
-
-/* function processMethodPayment(Name, Price, Context) {
-    if (methods[Name].available) return Context.answerCbQuery(`${Name.charAt(0).toUpperCase() + Name.slice(1)} method is not available.`, {
-        show_alert: true
-    })
-    if (balances[Context.chat.id.toString()] < Price) return Context.answerCbQuery("You don't have enough money on your balance.", {
-        show_alert: true
-    })
-
-    RemoveCredit(Context.chat.id, Price)
-
-    var recipt = createRecipt(Context)
-    Context.telegram.sendMessage(Context.chat.id, `<b>Paper Bot | ${Name.charAt(0).toUpperCase() + Name.slice(1)} Account</b>\n\n<b>✅ Credentials: </b><code>${accounts[Name].available[index]}</code>\n\n<b>🗒️ Recipt: </b> <code>${recipt}</code>`, {
-        parse_mode: 'HTML'
-    })
-    Broadcast(`✅ <b>New Method Purchase!</b>\n<b>👤 Customer:</b> <a href="tg://user?id=${Context.from.id}">${Context.from.username}</a> (${Context.from.id})\n<b>📩 Product:</b> ${Name.charAt(0).toUpperCase() + Name.slice(1)} Account\n<b>💲 Price:</b> <code>${Price}</code>\n<b>📆 Date timestamp:</b> <code>${+ Date.now()}</code>\n<b>🗒️ Recipt: </b> <code>${recipt}</code>`)
-} */
-
-function Refresh(ConfigPath = "./json/config.json", BansPath = "./json/bans.json", BalancesPath = "./json/balances.json", AccountsPath = "./json/accounts.json") {
-    fs.readFile(ConfigPath, 'utf8', (err, data) => {
-        config = JSON.parse(data)
-    })
-    fs.readFile(BansPath, 'utf8', (err, data) => {
-        bans = JSON.parse(data)
-    })
-    fs.readFile(BalancesPath, 'utf8', (err, data) => {
-        balances = JSON.parse(data)
-    })
-    fs.readFile(AccountsPath, 'utf8', (err, data) => {
-        accounts = JSON.parse(data)
-    })
-}
-// #endregion
-// #region ADMIN FUNCTIONS
-function SetCredit(userId, amount) {
-    if (!typeof userId == Number && !typeof amount == Number) return new Error("Invalid data.")
-    balances[userId] = amount
-    fs.writeFile("./json/balances.json", JSON.stringify(balances), () => {})
-}
-
-function AddCredit(userId, amount) {
-    if (!typeof userId == Number && !typeof amount == Number) return new Error("Invalid data.")
-    try {
-        telegram.telegram.getChat(userId)
-    } catch (TelegramError) {
-        return new Error("Invalid user.")
-    }
-    balances[userId] += amount
-    fs.writeFile("./json/balances.json", JSON.stringify(balances), _ => {})
-}
-
-function RemoveCredit(userId, amount) {
-    if (!typeof userId == Number && !typeof amount == Number) return new Error("Invalid data.")
-    try {
-        telegram.telegram.getChat(userId)
-    } catch (TelegramError) {
-        return new Error("Invalid user.")
-    }
-    balances[userId] -= amount
-    fs.writeFile("./json/balances.json", JSON.stringify(balances), _ => {})
-}
-
-function BanUser(userId) {
-    if (!typeof userId == Number) return new Error("Invalid data.")
-    try {
-        telegram.telegram.getChat(userId)
-    } catch (TelegramError) {
-        return new Error("Invalid user.")
-    }
-    bans.push(userId)
-    fs.writeFile("./json/bans.json", JSON.stringify(bans), _ => {})
-}
-
-function UnbanUser(userId) {
-    if (!typeof userId == Number) return new Error("Invalid data.")
-    try {
-        telegram.telegram.getChat(userId)
-    } catch (TelegramError) {
-        return new Error("Invalid user.")
-    }
-    bans.splice(bans.indexOf(userId), 1)
-    fs.writeFile("./json/bans.json", JSON.stringify(bans), _ => {})
-}
-
-function Broadcast(message) {
-    if (!typeof message == String) return new Error("Invalid data.")
-    config.admins.forEach(id => {
-        telegram.telegram.sendMessage(id, message, {
-            parse_mode: 'HTML'
-        })
-    })
-}
-// #endregion
-
-
-// #region START
-telegram.start(async (Context) => {
-    if (!await checks(Context)) return
-
-    if (!balances[Context.from.id]) {
-        SetCredit(Context.from.id, 0.00)
-    }
-
-    Log(`Started the bot.`, Context)
-
-    Context.telegram.sendMessage(Context.chat.id, `<b>Paper Bot | Welcome!</b>\n⚠️ By using the bot you are accepting the <a href="https://t.me/Papercc/2">Terms of Service</a>. ⚠️`, {
-        parse_mode: 'HTML',
-        reply_markup: {
-            inline_keyboard: [
-                [{
-                    text: '👽 Enter DreamWorld',
-                    callback_data: 'main'
-                }]
-            ]
-        }
+    Context.reply(`<b>${Config.shopName} Bot - Developed by <span class="tg-spoiler">@AnonHexo</span></b>`, {
+        parse_mode: "HTML",
+        ...Markup.inlineKeyboard([[Markup.button.callback("👽 Enter Shop", "main")]])
     })
 })
+
 // #endregion
 
-// #region MAIN MENUS
-telegram.action('main', async (Context) => {
-    if (!await checks(Context)) return
+// #region Bot Actions
+client.action("main", async (Context) => {
+    await Context.editMessageText(`Wassup <b>${Context.from.username}</b>, welcome to <b>${Config.shopName}!</b>\n
+💵 Balance: <code>${Users.find(usr => usr.id == Context.from.id).balance}$</code>
+🛒 Cart itmes: <code>${Users.find(usr => usr.id == Context.from.id).cart.length}</code>`, { parse_mode: 'HTML' })
 
-    var buttons
-    if (config.admins.includes(Context.from.id.toString())) {
-        buttons = {
+    if (Config.administrators.includes(Context.from.id)) {
+        await Context.editMessageReplyMarkup({
             inline_keyboard: [
-                [{
-                    text: '🛍️ Shop',
-                    callback_data: 'shop'
-                }, {
-                    text: '💰 Balance',
-                    callback_data: 'balance'
-                }, {
-                    text: '🛠️ Developer',
-                    callback_data: 'developer'
-                }],
-                [{
-                    text: 'ℹ️ Info',
-                    callback_data: 'info'
-                }]
-            ]
-        }
+                [Markup.button.callback("📚 Products", "products")],
+
+                [Markup.button.callback("🪪 Account", "account"),
+                Markup.button.callback("ℹ️ Info", "info")],
+
+                [Markup.button.callback("🛠️ Panel", "panel")]
+            ],
+        })
     } else {
-        buttons = {
+        await Context.editMessageReplyMarkup({
             inline_keyboard: [
-                [{
-                    text: '🛍️ Shop',
-                    callback_data: 'shop'
-                }, {
-                    text: '💰 Balance',
-                    callback_data: 'balance'
-                }],
-                [{
-                    text: 'ℹ️ Info',
-                    callback_data: 'info'
-                }]
-            ]
-        }
-    }
+                [Markup.button.callback("📚 Products", "products")],
 
-    Context.editMessageText(`<b>Paper Bot | Main Menu</b>\n\n<i>Happy to see you here ${Context.from.first_name}</i>`, {
-        parse_mode: 'HTML',
-        reply_markup: buttons
-    })
-})
-
-telegram.action('shop', async (Context) => {
-    if (!await checks(Context)) return
-
-
-    Context.editMessageText(`<b>Paper Bot | Shop</b>\n\n<b>💰 Balance: </b> <code>${balances[Context.chat.id.toString()]}€</code>`, {
-        parse_mode: 'HTML',
-        reply_markup: {
-            inline_keyboard: [
-                [{
-                    text: '📂 Methods',
-                    callback_data: 'methods'
-                }, {
-                    text: '🎰 Accounts',
-                    callback_data: 'accounts'
-                }],
-                [{
-                    text: 'Go back',
-                    callback_data: 'main'
-                }]
-            ]
-        }
-    })
-})
-
-telegram.action('balance', async (Context) => {
-    if (!await checks(Context)) return
-
-    Context.editMessageText(`<b>Paper Bot | Balance</b>\n\n💰 You currently have <code>${balances[Context.chat.id.toString()]}€</code> on your account.`, {
-        parse_mode: 'HTML',
-        reply_markup: {
-            inline_keyboard: [
-                [{
-                    text: '💲 Add Funds',
-                    callback_data: 'addFunds'
-                }],
-                [{
-                    text: 'Go back',
-                    callback_data: 'main'
-                }]
-            ]
-        }
-    })
-})
-
-telegram.action('developer', async (Context) => {
-    if (!await checks(Context)) return
-
-    Context.editMessageText(`<b>Paper Bot | Developer Panel</b>`, {
-        parse_mode: 'HTML',
-        reply_markup: {
-            inline_keyboard: [
-                [{
-                    text: 'Show Commands',
-                    callback_data: 'showCommands'
-                }],
-                [{
-                    text: 'Go back',
-                    callback_data: 'main'
-                }]
-            ]
-        }
-    })
-})
-
-telegram.action('showCommands', async (Context) => {
-    if (!await checks(Context)) return
-
-    Context.editMessageText(`*Paper Bot | Available Commands*\n\n/addAccount <service> <user:password>\n\n/id - _returns chat id_\n\n/setCredit <userId> <amount>\n/addCredit <userId> <amount>\n/removeCredit <userId> <amount>\n\n/ban <userId>\n/unban <userId>\n\n/decrypt <iv> <content> - _decrypt text (usually recipts)_\n\n/broadcast:<message>\n\n/devMode - _enables bot to only admins_`, {
-        parse_mode: 'Markdown',
-        reply_markup: {
-            inline_keyboard: [
-                [{
-                    text: 'Go back',
-                    callback_data: 'main'
-                }]
-            ]
-        }
-    })
-})
-
-telegram.action('info', async (Context) => {
-    if (!await checks(Context)) return
-
-    Context.editMessageText(`<b>Paper Bot | Info</b>`, {
-        parse_mode: 'HTML',
-        reply_markup: {
-            inline_keyboard: [
-                [{
-                    text: '❗ ToS',
-                    url: 'https://t.me/Papercc/2'
-                }, {
-                    text: '❓ Contact Support',
-                    callback_data: 'startChat',
-                }],
-                [{
-                    text: 'Go back',
-                    callback_data: 'main'
-                }]
-            ]
-        }
-    })
-})
-// #endregion
-
-// #region ADD FUNDS MENU
-telegram.action('addFunds', async (Context) => {
-    if (!await checks(Context)) return
-
-    Context.editMessageText(`<b>Paper Bot | Add Funds</b>\n\nCurrently accepted platforms:\n\n<b>• PayPal:</b> The amount of money recived will be added to your balance.\nUse Family & Friends option and send screenshot of the payment to ${config.payment.user} (add your Telegram username to the payment message for faster verification)`, {
-        parse_mode: 'HTML',
-        reply_markup: {
-            inline_keyboard: [
-                [{
-                    text: '🅿️ PayPal',
-                    url: config.payment.link
-                }],
-                [{
-                    text: 'Go back',
-                    callback_data: 'balance'
-                }]
-            ]
-        }
-    })
-})
-// #endregion
-
-// #region SUPPORT LIVE CHAT
-var lastExecution = {}
-var supportChat = {}
-telegram.action('startChat', async (Context) => {
-    if (!await checks(Context)) return
-    if (!config.supportChat) return Context.answerCbQuery("Currently not available.", {
-        show_alert: true
-    })
-    let now = +Date.now()
-    if (now - lastExecution[Context.from.id] <= 300000) {
-        return Context.answerCbQuery(`Please wait ${Math.trunc((300000 - (now - lastExecution[Context.from.id])) / 1000)} more second before doing that again!`, {
-            show_alert: true
+                [Markup.button.callback("🪪 Account", "account"),
+                Markup.button.callback("ℹ️ Info", "info")],
+            ],
         })
     }
-    lastExecution[Context.from.id] = now
 
-    supportChat[Context.from.id] = true
-    Broadcast(`<b>⛑️ New Support Chat</b>\n<b>👤 User:</b> <a href="tg://user?id=${Context.from.id}">@${Context.from.username}</a> (${Context.from.id})`)
+})
 
-    Context.editMessageText(`<b>Paper Bot | Support Chat</b>\n\n❓ Send your message and it will be forwarded to administrators.\n✅`, {
-        parse_mode: 'HTML',
-        reply_markup: {
-            inline_keyboard: [
-                [{
-                    text: '❌ Stop Chat',
-                    callback_data: 'stopChat'
-                }]
-            ]
+client.action("products", async (Context) => {
+    let message = `📚 <b>${Config.shopName} Products:</b>\n\n`
+    Products.forEach(item => {
+        if (item.hidden) return
+
+        let stock = item.stock
+        if (item.stock == 0) {
+            stock = "SOLD OUT"
+        } else if (item.stock == 999) {
+            stock = "UNLIMITED"
         }
+        message += ` <b>${item.name}:</b>\n<b>💸 Price:</b> <code>${item.price}$</code>\n🎰 Stock: <code>${stock}</code>\n\n`
     })
+    await Context.editMessageText(message, {parse_mode: 'HTML'})
 
-    //FORWARD METHOD (MAT NOT WORK DUE SETTINGS)
-    telegram.on('message', async (Context) => {
-        if (supportChat[Context.from.id]) {
-            if (!config.admins.includes(Context.from.id.toString())) {
-                config.admins.forEach(id => {
-                    Context.forwardMessage(id)
-                })
-            }
-
-            if (Context.message.reply_to_message && config.admins.includes(Context.from.id.toString())) {
-                telegram.telegram.sendMessage(Context.message.reply_to_message.chat.id, Context.message.text)
-            }
-        }
-    })
-
-    telegram.action('stopChat', async (Context) => {
-        supportChat[Context.from.id] = false
-        Broadcast(`<b>⛑️ Stopped Support Chat</b>\n<b>👤 User:</b> <a href="tg://user?id=${Context.from.id}">@${Context.from.username}</a> (${Context.from.id})`)
-
-
-        Context.editMessageText(`<b>Paper Bot | Support Chat</b>\n\n❓ Send your message and it will be forwarded to administrators.\n❌`, {
-            parse_mode: 'HTML',
-            reply_markup: {
-                inline_keyboard: [
-                    [{
-                        text: 'Go back',
-                        callback_data: 'info'
-                    }]
-                ]
-            }
-        })
-    })
-})
-// #endregion
-
-// #region SHOP SECTIONS
-telegram.action('methods', async (Context) => {
-    if (!await checks(Context)) return
-
-    Context.editMessageText(`<b>Paper Bot | Methods Menu</b>\n\n<i>Select your desidered method from below.</i>`, {
-        parse_mode: 'HTML',
-        reply_markup: {
-            inline_keyboard: [
-                [{
-                    text: 'Go back',
-                    callback_data: 'shop'
-                }]
-            ]
-        }
-    })
-})
-
-telegram.action('accounts', async (Context) => {
-    if (!await checks(Context)) return
-
-    Context.editMessageText(`<b>Paper Bot | Accounts Menu</b>\n\n<i>Select your desidered account from below.</i>`, {
-        parse_mode: 'HTML',
-        reply_markup: {
-            inline_keyboard: [
-                [{
-                    text: `Netflix (${accounts.netflix.available.length})`,
-                    callback_data: 'buyNetflixAccount'
-                }, {
-                    text: `Spotify (${accounts.spotify.available.length})`,
-                    callback_data: 'buySpotifyAccount'
-                }],
-                [{
-                    text: `NordVPN (${accounts.nordvpn.available.length})`,
-                    callback_data: 'buyNordVPNAccount'
-                }, {
-                    text: `Disney+ (${accounts.disney.available.length})`,
-                    callback_data: 'buyDisneyAccount'
-                }],
-                [{
-                    text: `PrimeVideo (${accounts.primevideo.available.length})`,
-                    callback_data: 'buyPrimeVideoAccount'
-                }],
-                [{
-                    text: 'Go back',
-                    callback_data: 'shop'
-                }]
-            ]
-        }
-    })
-
-})
-
-telegram.action('scripts', async (Context) => {
-    if (!await checks(Context)) return
-
-    Context.editMessageText(`<b>Paper Bot | Scripts Menu</b>\n\n<i>Select your desidered script from below.</i>`, {
-        parse_mode: 'HTML',
-        reply_markup: {
-            inline_keyboard: [
-                [{
-                    text: 'Go back',
-                    callback_data: 'shop'
-                }]
-            ]
-        }
-    })
-})
-// #endregion
-// #region ITEMS DESCRIPTION & PRICE
-telegram.action('buyNetflixAccount', async (Context) => {
-    if (!await checks(Context)) return
-
-    Context.editMessageText(`<b>Paper Bot | Netflix Account</b>\n\n<i>Premium cracked Netflix account.</i>\n<b>💰 Price: 0,50€</b>\n<b>♻️ Stock: ${accounts.netflix.available.length}</b>`, {
-        parse_mode: 'HTML',
-        reply_markup: {
-            inline_keyboard: [
-                [{
-                    text: `Buy Netflix Account`,
-                    callback_data: 'processNetflixAccount'
-                }],
-                [{
-                    text: 'Go back',
-                    callback_data: 'accounts'
-                }]
-            ]
-        }
-    })
-
-})
-
-telegram.action('buySpotifyAccount', async (Context) => {
-    if (!await checks(Context)) return
-
-    Context.editMessageText(`<b>Paper Bot | Spotify Account</b>\n\n<i>Premium cracked Spotify account.</i>\n<b>💰 Price: 0,50€</b>\n<b>♻️ Stock: ${accounts.spotify.available.length}</b>`, {
-        parse_mode: 'HTML',
-        reply_markup: {
-            inline_keyboard: [
-                [{
-                    text: `Buy Spotify Account`,
-                    callback_data: 'processSpotifyAccount'
-                }],
-                [{
-                    text: 'Go back',
-                    callback_data: 'accounts'
-                }]
-            ]
-        }
-    })
-
-})
-
-telegram.action('buyNordVPNAccount', async (Context) => {
-    if (!await checks(Context)) return
-
-    Context.editMessageText(`<b>Paper Bot | NordVPN Account</b>\n\n<i>Premium cracked NordVPN account.</i>\n<b>💰 Price: 0,50€</b>\n<b>♻️ Stock: ${accounts.nordvpn.available.length}</b>`, {
-        parse_mode: 'HTML',
-        reply_markup: {
-            inline_keyboard: [
-                [{
-                    text: `Buy NordVPN Account`,
-                    callback_data: 'processNordVPNAccount'
-                }],
-                [{
-                    text: 'Go back',
-                    callback_data: 'accounts'
-                }]
-            ]
-        }
-    })
-
-})
-
-telegram.action('buyDisneyAccount', async (Context) => {
-    if (!await checks(Context)) return
-
-    Context.editMessageText(`<b>Paper Bot | Disney+ Account</b>\n\n<i>Premium cracked Disney+ account.</i>\n<b>💰 Price: 0,50€</b>\n<b>♻️ Stock: ${accounts.disney.available.length}</b>`, {
-        parse_mode: 'HTML',
-        reply_markup: {
-            inline_keyboard: [
-                [{
-                    text: `Buy Disney+ Account`,
-                    callback_data: 'processDisneyAccount'
-                }],
-                [{
-                    text: 'Go back',
-                    callback_data: 'accounts'
-                }]
-            ]
-        }
-    })
-
-})
-
-telegram.action('buyPrimeVideoAccount', async (Context) => {
-    if (!await checks(Context)) return
-
-    Context.editMessageText(`<b>Paper Bot | PrimeVideo Account</b>\n\n<i>Premium cracked PrimeVideo account.</i>\n<b>💰 Price: 0,50€</b>\n<b>♻️ Stock: ${accounts.primevideo.available.length}</b>`, {
-        parse_mode: 'HTML',
-        reply_markup: {
-            inline_keyboard: [
-                [{
-                    text: `Buy PrimeVideo Account`,
-                    callback_data: 'processPrimeVideoAccount'
-                }],
-                [{
-                    text: 'Go back',
-                    callback_data: 'accounts'
-                }]
-            ]
-        }
-    })
-
-})
-// #endregion
-// #region PROCESSING PAYMENTS 
-telegram.action('processNetflixAccount', async (Context) => {
-    if (!await checks(Context)) return
-    processAccountPayment("netflix", 0.50, Context)
-})
-telegram.action('processSpotifyAccount', async (Context) => {
-    if (!await checks(Context)) return
-    processAccountPayment("spotify", 0.50, Context)
-})
-telegram.action('processNordVPNAccount', async (Context) => {
-    if (!await checks(Context)) return
-    processAccountPayment("nordvpn", 0.50, Context)
-})
-telegram.action('processDisneyAccount', async (Context) => {
-    if (!await checks(Context)) return
-    processAccountPayment("disney", 0.50, Context)
-})
-telegram.action('processPrimeVideoAccount', async (Context) => {
-    if (!await checks(Context)) return
-    processAccountPayment("primevideo", 0.50, Context)
-})
-// #endregion
-
-
-// #region ADMIN COMMANDS
-telegram.action('deleteMessage', async (Context) => {
-    Context.deleteMessage()
-})
-
-telegram.command('id', async (Context) => {
-    Context.reply(Context.chat.id)
-})
-
-telegram.command('devMode', async (Context) => {
-    if (!config.admins.includes(Context.from.id.toString())) return
-    devMode = !devMode
-
-    Context.reply(`Switched to: ${devMode}`)
-})
-
-telegram.command('setCredit', async (Context) => {
-    if (!config.admins.includes(Context.from.id.toString())) return
-
-    args = Context.message.text.split(' ')
-    if (!args[1] || !args[2]) return Context.reply("Incorrect syntax. Syntax is: /setCredit <userId> <amount>")
-
-    SetCredit(args[1], Number(args[2]))
-    Context.reply("Done!")
-})
-telegram.command('addCredit', async (Context) => {
-    if (!config.admins.includes(Context.from.id.toString())) return
-
-    args = Context.message.text.split(' ')
-    if (!args[1] || !args[2]) return Context.reply("Incorrect syntax. Syntax is: /addCredit <userId> <amount>")
-
-    AddCredit(args[1], Number(args[2]))
-    Context.reply("Done!")
-})
-telegram.command('removeCredit', async (Context) => {
-    if (!config.admins.includes(Context.from.id.toString())) return
-
-    args = Context.message.text.split(' ')
-    if (!args[1] || !args[2]) return Context.reply("Incorrect syntax. Syntax is: /removeCredit <userId> <amount>")
-
-    RemoveCredit(args[1], Number(args[2]))
-    Context.reply("Done!")
-})
-
-telegram.command('banUser', async (Context) => {
-    if (!config.admins.includes(Context.from.id.toString())) return
-
-    args = Context.message.text.split(' ')
-    if (!args[1]) return Context.reply("Incorrect syntax. Syntax is: /ban <userId>")
-
-    BanUser(Number(args[1]))
-    Context.reply("Done!")
-})
-telegram.command('unbanUser', async (Context) => {
-    if (!config.admins.includes(Context.from.id.toString())) return
-
-    args = Context.message.text.split(' ')
-    if (!args[1]) return Context.reply("No user ID specified. Syntax is: /unban <userId>")
-
-    UnbanUser(Number(args[1]))
-    Context.reply("Done!")
-})
-
-telegram.command('refresh', async (Context) => {
-    if (!config.admins.includes(Context.from.id.toString())) return
-
-    Refresh()
-
-    Context.reply("Done!")
-})
-
-telegram.command('encrypt', async (Context) => {
-    if (!config.admins.includes(Context.from.id.toString())) return
-
-    args = Context.message.text.split(' ')
-    if (!args[1]) return Context.reply("Incorrect syntax. Syntax is: /encrypt <content>")
-
-    var result = encrypt(args[1])
-    Context.reply(`${result.iv}.${result.content}`)
-})
-
-telegram.command('decrypt', async (Context) => {
-    if (!config.admins.includes(Context.from.id.toString())) return
-
-    args = Context.message.text.split(' ')
-    if (!args[1]) return Context.reply("Incorrect syntax. Syntax is: /decrypt <iv.content>")
-
-    var splitted = args[1].split(".")
-    Context.reply(decrypt({
-        "iv": splitted[0],
-        "content": splitted[1]
-    }))
-})
-
-telegram.command('broadcast', async (Context) => {
-    if (!config.admins.includes(Context.from.id.toString())) return
-
-    args = Context.message.text.split(':')
-    if (!args[1]) return Context.reply("Incorrect syntax. Syntax is: /broadcast:<message>")
-
-    Broadcast(args[1])
-})
-
-telegram.command('addService', async (Context) => {
-    if (!config.admins.includes(Context.from.id.toString())) return
-
-    args = Context.message.text.split(' ')
-    if (!args[1]) return Context.reply("Incorrect syntax. Syntax is: /addService <service>")
-
-    if (accounts[args[1]]) {
-        return Context.reply("Service already listed.")
-    } else {
-        accounts[args[1]] = []
-        fs.writeFile("./json/accounts.json", JSON.stringify(accounts), _ => {})
-        Context.reply("Done!")
+    let markup = {
+        inline_keyboard: [
+            [Markup.button.url("💫 Buy", "tg://user?id=304506948"),
+            Markup.button.callback("↩️ Go back", "main")]
+        ]
     }
+    await Context.editMessageReplyMarkup(markup)
 })
 
-telegram.command('addAccount', async (Context) => {
-    if (!config.admins.includes(Context.from.id.toString())) return
+client.action("account", (Context) => {
+    return Context.answerCbQuery(`Oh, ${Context.match[0]}! Great choice`)
+})
+client.action("info", (Context) => {
+    return Context.answerCbQuery(`Oh, ${Context.match[0]}! Great choice`)
+})
 
-    args = Context.message.text.split(' ')
-    if (!args[1]) return Context.reply("Incorrect syntax. Syntax is: /addAccount <service> <user:password>")
+client.action("panel", async (Context) => {
+    await Context.editMessageText(`<b>🛠️ Administator Panel (Beta)</b>`, {parse_mode: 'HTML'})
 
-    if (accounts[args[1]]) {
-        if (!args[2]) return Context.reply("Incorrect syntax. Syntax is: /addAccount <service> <user:password>")
-        accounts[args[1]].available.push(args[2])
-        fs.writeFile("./json/accounts.json", JSON.stringify(accounts), _ => {})
-        Context.reply("Done!")
-    } else {
-        return Context.reply("Service not listed.")
+    let markup = {
+        inline_keyboard: [
+            [Markup.button.callback("Add Product", "addproduct"),
+            Markup.button.callback("Remove Product", "rmproduct"),
+            Markup.button.callback("Edit Product", "editproduct")],
+            [Markup.button.callback("Add Admin", "addadmin"),
+            Markup.button.callback("Remove Admin", "rmadmin")],
+            [Markup.button.callback("Broadcast Message", "broadcast")],
+            [Markup.button.callback("Edit MOTD", "motd")],
+            [Markup.button.callback("↩️ Go Back", "main")]
+        ]
     }
+
+    await Context.editMessageReplyMarkup(markup)
 })
 
-telegram.command('alertStatus', async (Context) => {
-    if (!config.admins.includes(Context.from.id.toString())) return
+//#region Panel Actions
+//#region panel: remove product
+client.action("rmproduct", async (Context) => {
+    await Context.editMessageText(`<b>Select the product you want to remove:</b>`, {parse_mode: 'HTML'})
 
-    config.alertStatus = !config.alertStatus
-    fs.writeFile("./json/accounts.json", JSON.stringify(accounts), _ => {})
-})
-// #endregion
-
-// #region LAUNCHING BOT
-function conditionalChaining(value) {
-    if (value) {
-        Broadcast("Client Online ✅")
-    } else {
-        return
+    let keyboard = []
+    Products.forEach(item => {
+        keyboard.push([Markup.button.callback(item.name, `rmproduct-${Products.indexOf(item)}`)])
+    })
+    keyboard.push([Markup.button.callback("↩️ Go Back", "panel")])
+    let markup = {
+        inline_keyboard: keyboard
     }
-}
-telegram.launch({
+    await Context.editMessageReplyMarkup(markup)
+})
+client.action(/^rmproduct-\d{1,}/, async (Context) => {
+    let index = Context.match[0].split("-")[1]
+    await Context.editMessageText(`<b>Are you sure you want to delete product <code>${Products[index].name}</code>?</b>`, {parse_mode: 'HTML'})
+    let markup = {
+        inline_keyboard: [
+            [Markup.button.callback("✅", `rm-${Products.indexOf(Products[index])}`), Markup.button.callback("❌", "rmproduct")]
+        ]
+    }
+    await Context.editMessageReplyMarkup(markup)
+})
+client.action(/^rm-\d{1,}/, async (Context) => {
+    let index = Context.match[0].split("-")[1]
+    delete Products[index]
+    updateLocal()
+    console.log(index, Products)
+    await Context.editMessageText(`<b>Product deleted successfully!</b>`, {parse_mode: 'HTML'})
+    let markup = {
+        inline_keyboard: [
+            [Markup.button.callback("↩️ Go Back", "rmproduct")]
+        ]
+    }
+    await Context.editMessageReplyMarkup(markup)
+})
+//#endregion
+
+//#region panel: edit product
+client.action("editproduct", async (Context) => {
+    await Context.editMessageText(`<b>Select the product you want to edit:</b>`, {parse_mode: 'HTML'})
+
+    let keyboard = []
+    Products.forEach(item => {
+        keyboard.push([Markup.button.callback(item.name, `editproduct-${Products.indexOf(item)}`)])
+    })
+    keyboard.push([Markup.button.callback("↩️ Go Back", "panel")])
+    let markup = {
+        inline_keyboard: keyboard
+    }
+    await Context.editMessageReplyMarkup(markup)
+})
+client.action(/^editproduct-\d{1,}/, async (Context) => {
+    let index = Context.match[0].split("-")[1]
+    await Context.editMessageText(`<b>What you want to edit about product <code>${Products[index].name}</code>?</b>`, {parse_mode: 'HTML'})
+    let markup = {
+        inline_keyboard: [
+            [Markup.button.callback("✅", `rm-${Products.indexOf(Products[index])}`), Markup.button.callback("❌", "rmproduct")]
+        ]
+    }
+    await Context.editMessageReplyMarkup(markup)
+})
+//#endregion
+//#endregion
+
+// #region Launching
+client.launch({
     dropPendingUpdates: true
-}).then(
-    conditionalChaining(config.alertStatus)
-)
-Log(`Client Ready.`)
+})
 // #endregion
+process.once("SIGINT", () => client.stop("SIGINT"))
+process.once("SIGTERM", () => client.stop("SIGTERM"))
