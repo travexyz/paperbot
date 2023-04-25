@@ -68,6 +68,7 @@ client.action("main", async (Context) => {
     }
 
 })
+//#endregion
 
 client.action("products", async (Context) => {
     let message = `📚 <b>${Config.shopName} Products:</b>\n\n`
