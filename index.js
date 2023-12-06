@@ -8,7 +8,7 @@ const Users = require("./config/users.json")
 
 // #region Bot Configuration
 const {
-    Telegraf, Markup, Context
+    Telegraf, Markup, Scenes, session
 } = require('telegraf')
 
 const client = new Telegraf(process.env.TOKEN)
@@ -25,6 +25,21 @@ const updateLocal = _ => {
     writeFileSync("./config/users.json", JSON.stringify(Users))
 }
 // #endregion
+
+//#region WizardScene
+const inputWizard = new Scenes.WizardScene(
+    'input-wizard', // first argument is Scene_ID, same as for BaseScene
+    (ctx) => {
+        ctx.reply("Inserisci l'account in formato email:password :")
+        return ctx.wizard.next()
+    },
+    (ctx) => {
+        console.log(ctx.message.text)
+        return ctx.scene.leave()
+    }
+)
+const stage = new Scenes.Stage([inputWizard])
+//#endregion
 
 // #region Start Command
 client.start(async (Context) => {
@@ -124,6 +139,10 @@ client.action("panel", async (Context) => {
 
 //#region Panel Actions
 
+//#region panel: add product
+client.action("addproduct", async (Context) => {
+    await stage.enter('input-wizard')
+})
 //#region panel: remove product
 client.action("rmproduct", async (Context) => {
     await Context.editMessageText(`<b>Select the product you want to remove:</b>`, { parse_mode: 'HTML' })
@@ -191,6 +210,9 @@ client.action(/^editproduct-\d{1,}/, async (Context) => {
 //#endregion
 
 // #region Launching
+client.use(session())
+client.use(stage.middleware())
+
 client.launch({
     dropPendingUpdates: true
 })
