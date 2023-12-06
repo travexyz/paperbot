@@ -1,1 +1,26 @@
-[{"name":"Gay","price":5,"stock":0,"hidden":false},{"name":"Frocio","price":20,"stock":999,"hidden":false},{"name":"mamma","price":2,"stock":23,"hidden":false},null]
+[
+    {
+        "name": "Gay",
+        "price": 5,
+        "stock": 0,
+        "hidden": false
+    },
+    {
+        "name": "Frocio",
+        "price": 20,
+        "stock": 999,
+        "hidden": false
+    },
+    {
+        "name": "mamma",
+        "price": 2,
+        "stock": 23,
+        "hidden": false
+    },
+    {
+        "name": "culo",
+        "price": 2,
+        "stock": -1,
+        "hidden": false
+    }
+]

@@ -18,14 +18,15 @@ client.catch((err) => {
         client.telegram.sendMessage(id, `Error Occurred: \`\`\`${err}\`\`\``, { parse_mode: "MarkdownV2" })
     })
 })
-// #endregion
 
-// #region Start Command
 const updateLocal = _ => {
     writeFileSync("./config/config.json", JSON.stringify(Config))
     writeFileSync("./config/products.json", JSON.stringify(Products))
     writeFileSync("./config/users.json", JSON.stringify(Users))
 }
+// #endregion
+
+// #region Start Command
 client.start(async (Context) => {
     if (Config.bans.includes(Context.chat.id)) return
 
@@ -36,7 +37,6 @@ client.start(async (Context) => {
         ...Markup.inlineKeyboard([[Markup.button.callback("👽 Enter Shop", "main")]])
     })
 })
-
 // #endregion
 
 // #region Bot Actions
@@ -70,6 +70,7 @@ client.action("main", async (Context) => {
 })
 //#endregion
 
+// #region Menu Actions
 client.action("products", async (Context) => {
     let message = `📚 <b>${Config.shopName} Products:</b>\n\n`
     Products.forEach(item => {
@@ -78,12 +79,12 @@ client.action("products", async (Context) => {
         let stock = item.stock
         if (item.stock == 0) {
             stock = "SOLD OUT"
-        } else if (item.stock == 999) {
+        } else if (item.stock == -1) {
             stock = "UNLIMITED"
         }
         message += ` <b>${item.name}:</b>\n<b>💸 Price:</b> <code>${item.price}$</code>\n🎰 Stock: <code>${stock}</code>\n\n`
     })
-    await Context.editMessageText(message, {parse_mode: 'HTML'})
+    await Context.editMessageText(message, { parse_mode: 'HTML' })
 
     let markup = {
         inline_keyboard: [
@@ -102,7 +103,7 @@ client.action("info", (Context) => {
 })
 
 client.action("panel", async (Context) => {
-    await Context.editMessageText(`<b>🛠️ Administator Panel (Beta)</b>`, {parse_mode: 'HTML'})
+    await Context.editMessageText(`<b>🛠️ Administator Panel (Beta)</b>`, { parse_mode: 'HTML' })
 
     let markup = {
         inline_keyboard: [
@@ -119,11 +120,13 @@ client.action("panel", async (Context) => {
 
     await Context.editMessageReplyMarkup(markup)
 })
+// #endregion
 
 //#region Panel Actions
+
 //#region panel: remove product
 client.action("rmproduct", async (Context) => {
-    await Context.editMessageText(`<b>Select the product you want to remove:</b>`, {parse_mode: 'HTML'})
+    await Context.editMessageText(`<b>Select the product you want to remove:</b>`, { parse_mode: 'HTML' })
 
     let keyboard = []
     Products.forEach(item => {
@@ -137,7 +140,7 @@ client.action("rmproduct", async (Context) => {
 })
 client.action(/^rmproduct-\d{1,}/, async (Context) => {
     let index = Context.match[0].split("-")[1]
-    await Context.editMessageText(`<b>Are you sure you want to delete product <code>${Products[index].name}</code>?</b>`, {parse_mode: 'HTML'})
+    await Context.editMessageText(`<b>Are you sure you want to delete product <code>${Products[index].name}</code>?</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("✅", `rm-${Products.indexOf(Products[index])}`), Markup.button.callback("❌", "rmproduct")]
@@ -150,7 +153,7 @@ client.action(/^rm-\d{1,}/, async (Context) => {
     delete Products[index]
     updateLocal()
     console.log(index, Products)
-    await Context.editMessageText(`<b>Product deleted successfully!</b>`, {parse_mode: 'HTML'})
+    await Context.editMessageText(`<b>Product deleted successfully!</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("↩️ Go Back", "rmproduct")]
@@ -159,10 +162,9 @@ client.action(/^rm-\d{1,}/, async (Context) => {
     await Context.editMessageReplyMarkup(markup)
 })
 //#endregion
-
 //#region panel: edit product
 client.action("editproduct", async (Context) => {
-    await Context.editMessageText(`<b>Select the product you want to edit:</b>`, {parse_mode: 'HTML'})
+    await Context.editMessageText(`<b>Select the product you want to edit:</b>`, { parse_mode: 'HTML' })
 
     let keyboard = []
     Products.forEach(item => {
@@ -176,7 +178,7 @@ client.action("editproduct", async (Context) => {
 })
 client.action(/^editproduct-\d{1,}/, async (Context) => {
     let index = Context.match[0].split("-")[1]
-    await Context.editMessageText(`<b>What you want to edit about product <code>${Products[index].name}</code>?</b>`, {parse_mode: 'HTML'})
+    await Context.editMessageText(`<b>What you want to edit about product <code>${Products[index].name}</code>?</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("✅", `rm-${Products.indexOf(Products[index])}`), Markup.button.callback("❌", "rmproduct")]
@@ -185,12 +187,13 @@ client.action(/^editproduct-\d{1,}/, async (Context) => {
     await Context.editMessageReplyMarkup(markup)
 })
 //#endregion
+
 //#endregion
 
 // #region Launching
 client.launch({
     dropPendingUpdates: true
 })
-// #endregion
 process.once("SIGINT", () => client.stop("SIGINT"))
 process.once("SIGTERM", () => client.stop("SIGTERM"))
+// #endregion
