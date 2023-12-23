@@ -1,9 +1,9 @@
 // #region Envoirment Configuation
 require('dotenv').config()
 const { writeFileSync } = require('fs')
-const Config = require("./config/config.json")
-const Products = require("./config/products.json")
-const Users = require("./config/users.json")
+var Config = require("./config/config.json")
+var Products = require("./config/products.json")
+var Users = require("./config/users.json")
 // #endregion
 
 // #region Bot Configuration
@@ -27,18 +27,37 @@ const updateLocal = _ => {
 // #endregion
 
 //#region WizardScene
-const inputWizard = new Scenes.WizardScene(
-    'input-wizard', // first argument is Scene_ID, same as for BaseScene
+const addProductWizard = new Scenes.WizardScene(
+    'addproduct-wizard', // first argument is Scene_ID, same as for BaseScene
     (ctx) => {
-        ctx.reply("Inserisci l'account in formato email:password :")
+        ctx.reply("Inserisci il nome del prodotto:")
+        productInfo = {}
         return ctx.wizard.next()
     },
     (ctx) => {
-        console.log(ctx.message.text)
+        productInfo.name = ctx.message.text
+        ctx.reply(`Inserisci il prezzo per il prodotto ${productInfo.name}:`)
+        return ctx.wizard.next()
+    },
+    (ctx) => {
+        productInfo.price = ctx.message.text
+        ctx.reply(`Inserisci la quantità di ${productInfo.name}:`)
+        return ctx.wizard.next()
+    },(ctx) => {
+        productInfo.stock = ctx.message.text
+        ctx.reply("Vuoi nascondere il prodotto dalla lista? (1 si, 0 no)")
+        return ctx.wizard.next()
+    },(ctx) => {
+        productInfo.hidden = (ctx.message.text == "1") ? true : false
+        Products.push(productInfo)
+        updateLocal()
+        ctx.reply(`Aggiunto prodotto ${productInfo.name} (x${productInfo.stock}) al prezzo di ${productInfo.price}!`)
         return ctx.scene.leave()
-    }
+    },
 )
-const stage = new Scenes.Stage([inputWizard])
+
+client.use(session());
+client.use(new Scenes.Stage([addProductWizard]));
 //#endregion
 
 // #region Start Command
@@ -141,8 +160,9 @@ client.action("panel", async (Context) => {
 
 //#region panel: add product
 client.action("addproduct", async (Context) => {
-    await stage.enter('input-wizard')
+    await Context.scene.enter("addproduct-wizard")
 })
+//#endregion
 //#region panel: remove product
 client.action("rmproduct", async (Context) => {
     await Context.editMessageText(`<b>Select the product you want to remove:</b>`, { parse_mode: 'HTML' })
@@ -171,7 +191,7 @@ client.action(/^rm-\d{1,}/, async (Context) => {
     let index = Context.match[0].split("-")[1]
     delete Products[index]
     updateLocal()
-    console.log(index, Products)
+
     await Context.editMessageText(`<b>Product deleted successfully!</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
@@ -200,7 +220,8 @@ client.action(/^editproduct-\d{1,}/, async (Context) => {
     await Context.editMessageText(`<b>What you want to edit about product <code>${Products[index].name}</code>?</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
-            [Markup.button.callback("✅", `rm-${Products.indexOf(Products[index])}`), Markup.button.callback("❌", "rmproduct")]
+            [Markup.button.callback("Name", `action`), Markup.button.callback("Price", "action"), Markup.button.callback("Stock", "action")],
+            [Markup.button.callback("Visibility", `action`)]
         ]
     }
     await Context.editMessageReplyMarkup(markup)
@@ -210,8 +231,6 @@ client.action(/^editproduct-\d{1,}/, async (Context) => {
 //#endregion
 
 // #region Launching
-client.use(session())
-client.use(stage.middleware())
 
 client.launch({
     dropPendingUpdates: true
