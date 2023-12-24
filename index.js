@@ -26,9 +26,9 @@ const updateLocal = _ => {
 }
 // #endregion
 
-//#region WizardScene
-const addProductWizard = new Scenes.WizardScene(
-    'addproduct-wizard', // first argument is Scene_ID, same as for BaseScene
+//#region Wizards
+const addProduct = new Scenes.WizardScene(
+    'addproduct',
     (ctx) => {
         ctx.reply("Inserisci il nome del prodotto:")
         productInfo = {}
@@ -43,11 +43,11 @@ const addProductWizard = new Scenes.WizardScene(
         productInfo.price = ctx.message.text
         ctx.reply(`Inserisci la quantità di ${productInfo.name}:`)
         return ctx.wizard.next()
-    },(ctx) => {
+    }, (ctx) => {
         productInfo.stock = ctx.message.text
         ctx.reply("Vuoi nascondere il prodotto dalla lista? (1 si, 0 no)")
         return ctx.wizard.next()
-    },(ctx) => {
+    }, (ctx) => {
         productInfo.hidden = (ctx.message.text == "1") ? true : false
         Products.push(productInfo)
         updateLocal()
@@ -55,9 +55,60 @@ const addProductWizard = new Scenes.WizardScene(
         return ctx.scene.leave()
     },
 )
+const editName = new Scenes.WizardScene(
+    'editname',
+    (ctx) => {
+        ctx.reply("Inserisci il nuovo nome del prodotto:")
+        return ctx.wizard.next()
+    }, (ctx) => {
+        Products[ctx.session.product].name = ctx.message.text
+        updateLocal()
+        ctx.reply(`Modificato nome del prodotto in ${Products[ctx.session.product].name}`)
+        return ctx.scene.leave()
+    },
+)
+
+const editPrice = new Scenes.WizardScene(
+    'editprice',
+    (ctx) => {
+        ctx.reply("Inserisci il nuovo prezzo del prodotto:")
+        return ctx.wizard.next()
+    }, (ctx) => {
+        Products[ctx.session.product].price = ctx.message.text
+        updateLocal()
+        ctx.reply(`Modificato prezzo del prodotto in ${Products[ctx.session.product].price}`)
+        return ctx.scene.leave()
+    },
+)
+
+const editStock = new Scenes.WizardScene(
+    'editstock',
+    (ctx) => {
+        ctx.reply("Inserisci la nuova quantità del prodotto:")
+        return ctx.wizard.next()
+    }, (ctx) => {
+        Products[ctx.session.product].stock = ctx.message.text
+        updateLocal()
+        ctx.reply(`Modificata quantità del prodotto in ${Products[ctx.session.product].stock}`)
+        return ctx.scene.leave()
+    },
+)
+
+const editVis = new Scenes.WizardScene(
+    'editvis',
+    (ctx) => {
+        ctx.reply("Vuoi nascondere (1) o mostrare (0) il prodotto:")
+        return ctx.wizard.next()
+    }, (ctx) => {
+        Products[ctx.session.product].hidden = (ctx.message.text == "1") ? true : false
+        updateLocal()
+        ctx.reply(`Modificata visibilità del prodotto in ${Products[ctx.session.product].hidden}`)
+        return ctx.scene.leave()
+    },
+)
 
 client.use(session());
-client.use(new Scenes.Stage([addProductWizard]));
+client.use(new Scenes.Stage([addProduct, editName, editPrice, editStock, editVis]));
 //#endregion
 
 // #region Start Command
@@ -157,13 +208,12 @@ client.action("panel", async (Context) => {
 // #endregion
 
 //#region Panel Actions
-
-//#region panel: add product
+//#region Action: add product
 client.action("addproduct", async (Context) => {
-    await Context.scene.enter("addproduct-wizard")
+    await Context.scene.enter("addproduct")
 })
 //#endregion
-//#region panel: remove product
+//#region Action: remove product
 client.action("rmproduct", async (Context) => {
     await Context.editMessageText(`<b>Select the product you want to remove:</b>`, { parse_mode: 'HTML' })
 
@@ -201,7 +251,7 @@ client.action(/^rm-\d{1,}/, async (Context) => {
     await Context.editMessageReplyMarkup(markup)
 })
 //#endregion
-//#region panel: edit product
+//#region Action: edit product
 client.action("editproduct", async (Context) => {
     await Context.editMessageText(`<b>Select the product you want to edit:</b>`, { parse_mode: 'HTML' })
 
@@ -217,17 +267,34 @@ client.action("editproduct", async (Context) => {
 })
 client.action(/^editproduct-\d{1,}/, async (Context) => {
     let index = Context.match[0].split("-")[1]
-    await Context.editMessageText(`<b>What you want to edit about product <code>${Products[index].name}</code>?</b>`, { parse_mode: 'HTML' })
+    let product = Products[index]
+    await Context.editMessageText(`<b>What you want to edit about product <code>${product.name}</code>?</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
-            [Markup.button.callback("Name", `action`), Markup.button.callback("Price", "action"), Markup.button.callback("Stock", "action")],
-            [Markup.button.callback("Visibility", `action`)]
+            [Markup.button.callback("Name", `changename-${Products.indexOf(product)}`), Markup.button.callback("Price", `changeprice-${Products.indexOf(product)}`), Markup.button.callback("Stock", `changestock-${Products.indexOf(product)}`)],
+            [Markup.button.callback("Visibility", `changevis-${Products.indexOf(product)}`)],
+            [Markup.button.callback("↩️ Go Back", "editproduct")]
         ]
     }
     await Context.editMessageReplyMarkup(markup)
 })
+client.action(/^changename-\d{1,}/, async (Context) => {
+    let index = Context.match[0].split("-")[1]
+    await Context.scene.enter("editname", {product: index})
+})
+client.action(/^changeprice-\d{1,}/, async (Context) => {
+    let index = Context.match[0].split("-")[1]
+    await Context.scene.enter("changeprice", {product: index})
+})
+client.action(/^changestock-\d{1,}/, async (Context) => {
+    let index = Context.match[0].split("-")[1]
+    await Context.scene.enter("changestock", {product: index})
+})
+client.action(/^changevis-\d{1,}/, async (Context) => {
+    let index = Context.match[0].split("-")[1]
+    await Context.scene.enter("changevis", {product: index})
+})
 //#endregion
-
 //#endregion
 
 // #region Launching
