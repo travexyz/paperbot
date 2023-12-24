@@ -15,7 +15,7 @@ const client = new Telegraf(process.env.TOKEN)
 client.catch((err) => {
     console.error(err)
     Config.administrators.forEach(id => {
-        client.telegram.sendMessage(id, `Error Occurred: \`\`\`${err}\`\`\``, { parse_mode: "MarkdownV2" })
+        client.telegram.sendMessage(id, `Errore: \`\`\`${err}\`\`\``, { parse_mode: "MarkdownV2" })
     })
 })
 
@@ -45,25 +45,26 @@ const addProduct = new Scenes.WizardScene(
         return ctx.wizard.next()
     }, (ctx) => {
         productInfo.stock = ctx.message.text
-        ctx.reply("Vuoi nascondere il prodotto dalla lista? (1 si, 0 no)")
+        ctx.reply("Vuoi nascondere o mostrare il prodotto nella lista? (0 mostra, 1 nascondi)")
         return ctx.wizard.next()
     }, (ctx) => {
         productInfo.hidden = (ctx.message.text == "1") ? true : false
         Products.push(productInfo)
         updateLocal()
-        ctx.reply(`Aggiunto prodotto ${productInfo.name} (x${productInfo.stock}) al prezzo di ${productInfo.price}!`)
+        ctx.reply(`Aggiunto prodotto ${(productInfo.hidden) ? "nascosto" : "visibile"} ${productInfo.name} (x${productInfo.stock}) al prezzo di ${productInfo.price}!`)
         return ctx.scene.leave()
     },
 )
+
 const editName = new Scenes.WizardScene(
     'editname',
     (ctx) => {
         ctx.reply("Inserisci il nuovo nome del prodotto:")
         return ctx.wizard.next()
     }, (ctx) => {
-        Products[ctx.session.product].name = ctx.message.text
+        Products[ctx.session.__scenes.state.product].name = ctx.message.text
         updateLocal()
-        ctx.reply(`Modificato nome del prodotto in ${Products[ctx.session.product].name}`)
+        ctx.reply(`Modificato nome del prodotto in ${Products[ctx.session.__scenes.state.product].name}`)
         return ctx.scene.leave()
     },
 )
@@ -74,9 +75,9 @@ const editPrice = new Scenes.WizardScene(
         ctx.reply("Inserisci il nuovo prezzo del prodotto:")
         return ctx.wizard.next()
     }, (ctx) => {
-        Products[ctx.session.product].price = ctx.message.text
+        Products[ctx.session.__scenes.state.product].price = ctx.message.text
         updateLocal()
-        ctx.reply(`Modificato prezzo del prodotto in ${Products[ctx.session.product].price}`)
+        ctx.reply(`Modificato prezzo del prodotto in ${Products[ctx.session.__scenes.state.product].price}`)
         return ctx.scene.leave()
     },
 )
@@ -87,28 +88,52 @@ const editStock = new Scenes.WizardScene(
         ctx.reply("Inserisci la nuova quantità del prodotto:")
         return ctx.wizard.next()
     }, (ctx) => {
-        Products[ctx.session.product].stock = ctx.message.text
+        Products[ctx.session.__scenes.state.product].stock = ctx.message.text
         updateLocal()
-        ctx.reply(`Modificata quantità del prodotto in ${Products[ctx.session.product].stock}`)
+        ctx.reply(`Modificata quantità del prodotto in ${Products[ctx.session.__scenes.state.product].stock}`)
         return ctx.scene.leave()
     },
 )
 
-const editVis = new Scenes.WizardScene(
-    'editvis',
+const addAdmin = new Scenes.WizardScene(
+    'addadmin',
     (ctx) => {
-        ctx.reply("Vuoi nascondere (1) o mostrare (0) il prodotto:")
+        ctx.reply("Inserisci l'ID dell'amministratore da aggiungere:")
+        return ctx.wizard.next()
+    },
+    (ctx) => {
+        id = ctx.message.text
+        client.telegram.getChat(id)
+            .then(chat => { ctx.reply(`Sei sicuro di voler aggiungere ${chat.username} (${id}) alla lista di amministratori? (0 no, 1 si)`) }, { parse_mode: 'HTML' })
+            .catch(err => { ctx.reply(`Impossibile trovare l'utente, verifica che l'ID (non l'username) sia corretto! Esco...\n${err}`); ctx.scene.leave()}, { parse_mode: 'HTML' })
         return ctx.wizard.next()
     }, (ctx) => {
-        Products[ctx.session.product].hidden = (ctx.message.text == "1") ? true : false
+        if (ctx.message.text == "1") {
+            Config.administrators.push(id)
+            updateLocal()
+            ctx.reply(`Utente aggiunto alla lista degli amministratori!`)
+        } else {
+            ctx.reply(`OK, utente NON aggiunto!`)
+        }
+        return ctx.scene.leave()
+    },
+)
+
+const editMotd = new Scenes.WizardScene(
+    'editmotd',
+    (ctx) => {
+        ctx.reply("Inserisci il nuovo MOTD da visualizzare:")
+        return ctx.wizard.next()
+    }, (ctx) => {
+        Config.motd = ctx.message.text
         updateLocal()
-        ctx.reply(`Modificata visibilità del prodotto in ${Products[ctx.session.product].hidden}`)
+        ctx.reply(`Nuovo MOTD impostato!`)
         return ctx.scene.leave()
     },
 )
 
 client.use(session());
-client.use(new Scenes.Stage([addProduct, editName, editPrice, editStock, editVis]));
+client.use(new Scenes.Stage([addProduct, editName, editPrice, editStock, addAdmin, editMotd]));
 //#endregion
 
 // #region Start Command
@@ -117,34 +142,32 @@ client.start(async (Context) => {
 
     updateLocal()
 
-    Context.reply(`<b>${Config.shopName} Bot - Developed by <span class="tg-spoiler">@AnonHexo</span></b>`, {
-        parse_mode: "HTML",
-        ...Markup.inlineKeyboard([[Markup.button.callback("👽 Enter Shop", "main")]])
+    Context.reply(`*${Config.shopName} Bot — Creato da ||travexyz||*`, {
+        parse_mode: "MarkdownV2",
+        ...Markup.inlineKeyboard([[Markup.button.callback("👽 Entra", "main")]])
     })
 })
 // #endregion
 
 // #region Bot Actions
 client.action("main", async (Context) => {
-    await Context.editMessageText(`Wassup <b>${Context.from.username}</b>, welcome to <b>${Config.shopName}!</b>\n
-💵 Balance: <code>${Users.find(usr => usr.id == Context.from.id).balance}$</code>
-🛒 Cart itmes: <code>${Users.find(usr => usr.id == Context.from.id).cart.length}</code>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`😎 Ciao <b>${Context.from.username}</b>, benvenuto in <b>${Config.shopName}</b>!\n\n${(Config.motd != null) ? `<code>${Config.motd}</code>` : `${new Date().toLocaleDateString()}`}`, { parse_mode: 'HTML' })
 
     if (Config.administrators.includes(Context.from.id)) {
         await Context.editMessageReplyMarkup({
             inline_keyboard: [
-                [Markup.button.callback("📚 Products", "products")],
+                [Markup.button.callback("📚 Prodotti", "products")],
 
                 [Markup.button.callback("🪪 Account", "account"),
                 Markup.button.callback("ℹ️ Info", "info")],
 
-                [Markup.button.callback("🛠️ Panel", "panel")]
+                [Markup.button.callback("🛠️ Pannello Amministratori", "panel")]
             ],
         })
     } else {
         await Context.editMessageReplyMarkup({
             inline_keyboard: [
-                [Markup.button.callback("📚 Products", "products")],
+                [Markup.button.callback("📚 Prodotti", "products")],
 
                 [Markup.button.callback("🪪 Account", "account"),
                 Markup.button.callback("ℹ️ Info", "info")],
@@ -159,7 +182,7 @@ client.action("main", async (Context) => {
 client.action("products", async (Context) => {
     let message = `📚 <b>${Config.shopName} Products:</b>\n\n`
     Products.forEach(item => {
-        if (item.hidden) return
+        if (item.hidden && !Config.administrators.includes(Context.from.id)) return
 
         let stock = item.stock
         if (item.stock == 0) {
@@ -167,39 +190,58 @@ client.action("products", async (Context) => {
         } else if (item.stock == -1) {
             stock = "UNLIMITED"
         }
-        message += ` <b>${item.name}:</b>\n<b>💸 Price:</b> <code>${item.price}$</code>\n🎰 Stock: <code>${stock}</code>\n\n`
+        message += `<b>‼️ ${item.name}</b>\n<b>💸 Prezzo:</b> <code>${item.price}$</code>\n🎰 Stock: <code>${stock}</code>\n\n`
     })
     await Context.editMessageText(message, { parse_mode: 'HTML' })
 
     let markup = {
         inline_keyboard: [
-            [Markup.button.url("💫 Buy", "tg://user?id=304506948"),
-            Markup.button.callback("↩️ Go back", "main")]
+            [Markup.button.url("💫 Acquista", "tg://user?id=304506948"),
+            Markup.button.callback("↩️ Indietro", "main")]
         ]
     }
     await Context.editMessageReplyMarkup(markup)
 })
 
-client.action("account", (Context) => {
-    return Context.answerCbQuery(`Oh, ${Context.match[0]}! Great choice`)
+client.action("account", async (Context) => {
+    let pisello = Math.floor(Math.random() * 20)
+    await Context.editMessageText(`👤 Username <code>${Context.from.username}</code>${(Config.administrators.includes(Context.from.id)) ? " <b>(caldo)</b>" : ""}
+🆔 <b>ID:</b> <code>${Context.from.id}</code>
+💵 <b>Grana:</b> <code>${Users.find(usr => usr.id == Context.from.id).balance}${Config.currency}</code>
+🛒 <b>Ordini effettuati:</b> <code>${Users.find(usr => usr.id == Context.from.id).orders.length}</code>
+📏 <b>Pisello (variabile):</b> <code>${pisello}cm ${(pisello > 10) ? "😱" : "😮‍💨"}</code>`, { parse_mode: 'HTML' })
+
+    await Context.editMessageReplyMarkup({
+        inline_keyboard: [
+            [Markup.button.callback("↩️ Indietro", "main")]
+        ]
+    })
 })
-client.action("info", (Context) => {
-    return Context.answerCbQuery(`Oh, ${Context.match[0]}! Great choice`)
+
+client.action("info", async (Context) => {
+    await Context.editMessageText("*🤖 Creato da ||travexyz|| con tanto ||❤️|| in nodejs*", { parse_mode: 'MarkdownV2' })
+
+    await Context.editMessageReplyMarkup({
+        inline_keyboard: [
+            [Markup.button.url("Contatta Sviluppatore", "tg://user?id=304506948")],
+            [Markup.button.callback("↩️ Indietro", "main")]
+        ]
+    })
 })
 
 client.action("panel", async (Context) => {
-    await Context.editMessageText(`<b>🛠️ Administator Panel (Beta)</b>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`<b>🛠️ Pannello Amministratori</b>`, { parse_mode: 'HTML' })
 
     let markup = {
         inline_keyboard: [
-            [Markup.button.callback("Add Product", "addproduct"),
-            Markup.button.callback("Remove Product", "rmproduct"),
-            Markup.button.callback("Edit Product", "editproduct")],
-            [Markup.button.callback("Add Admin", "addadmin"),
-            Markup.button.callback("Remove Admin", "rmadmin")],
-            [Markup.button.callback("Broadcast Message", "broadcast")],
-            [Markup.button.callback("Edit MOTD", "motd")],
-            [Markup.button.callback("↩️ Go Back", "main")]
+            [Markup.button.callback("Aggiungi Prodotto", "addproduct"),
+            Markup.button.callback("Rimuovi Prodotto", "rmproduct"),
+            Markup.button.callback("Modifica Prodotto", "editproduct")],
+            [Markup.button.callback("Aggiungi Admin", "addadmin"),
+            Markup.button.callback("Rimuovi Admin", "rmadmin")],
+            [Markup.button.callback("Trasmetti messaggio", "broadcast")],
+            [Markup.button.callback("Modifica MOTD", "motd")],
+            [Markup.button.callback("↩️ Indietro", "main")]
         ]
     }
 
@@ -215,13 +257,13 @@ client.action("addproduct", async (Context) => {
 //#endregion
 //#region Action: remove product
 client.action("rmproduct", async (Context) => {
-    await Context.editMessageText(`<b>Select the product you want to remove:</b>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`<b>Seleziona il prodotto che vuoi rimuovere:</b>`, { parse_mode: 'HTML' })
 
     let keyboard = []
     Products.forEach(item => {
         keyboard.push([Markup.button.callback(item.name, `rmproduct-${Products.indexOf(item)}`)])
     })
-    keyboard.push([Markup.button.callback("↩️ Go Back", "panel")])
+    keyboard.push([Markup.button.callback("↩️ Indietro", "panel")])
     let markup = {
         inline_keyboard: keyboard
     }
@@ -229,23 +271,23 @@ client.action("rmproduct", async (Context) => {
 })
 client.action(/^rmproduct-\d{1,}/, async (Context) => {
     let index = Context.match[0].split("-")[1]
-    await Context.editMessageText(`<b>Are you sure you want to delete product <code>${Products[index].name}</code>?</b>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`<b>Sei sicuro che vuoi eliminare il prodotto <code>${Products[index].name}</code>?</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
-            [Markup.button.callback("✅", `rm-${Products.indexOf(Products[index])}`), Markup.button.callback("❌", "rmproduct")]
+            [Markup.button.callback("✅", `productrm-${Products.indexOf(Products[index])}`), Markup.button.callback("❌", "rmproduct")]
         ]
     }
     await Context.editMessageReplyMarkup(markup)
 })
-client.action(/^rm-\d{1,}/, async (Context) => {
+client.action(/^productrm-\d{1,}/, async (Context) => {
     let index = Context.match[0].split("-")[1]
     delete Products[index]
     updateLocal()
 
-    await Context.editMessageText(`<b>Product deleted successfully!</b>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`<b>Prodotto eliminato!</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
-            [Markup.button.callback("↩️ Go Back", "rmproduct")]
+            [Markup.button.callback("↩️ Indietro", "rmproduct")]
         ]
     }
     await Context.editMessageReplyMarkup(markup)
@@ -253,13 +295,13 @@ client.action(/^rm-\d{1,}/, async (Context) => {
 //#endregion
 //#region Action: edit product
 client.action("editproduct", async (Context) => {
-    await Context.editMessageText(`<b>Select the product you want to edit:</b>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`<b>Seleziona il prodotto che vuoi modificare:</b>`, { parse_mode: 'HTML' })
 
     let keyboard = []
     Products.forEach(item => {
         keyboard.push([Markup.button.callback(item.name, `editproduct-${Products.indexOf(item)}`)])
     })
-    keyboard.push([Markup.button.callback("↩️ Go Back", "panel")])
+    keyboard.push([Markup.button.callback("↩️ Indietro", "panel")])
     let markup = {
         inline_keyboard: keyboard
     }
@@ -268,31 +310,152 @@ client.action("editproduct", async (Context) => {
 client.action(/^editproduct-\d{1,}/, async (Context) => {
     let index = Context.match[0].split("-")[1]
     let product = Products[index]
-    await Context.editMessageText(`<b>What you want to edit about product <code>${product.name}</code>?</b>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`<b>Cosa vuoi cambiare del prodotto <code>${product.name}</code>?</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
-            [Markup.button.callback("Name", `changename-${Products.indexOf(product)}`), Markup.button.callback("Price", `changeprice-${Products.indexOf(product)}`), Markup.button.callback("Stock", `changestock-${Products.indexOf(product)}`)],
-            [Markup.button.callback("Visibility", `changevis-${Products.indexOf(product)}`)],
-            [Markup.button.callback("↩️ Go Back", "editproduct")]
+            [Markup.button.callback("Nome", `changename-${Products.indexOf(product)}`), Markup.button.callback("Prezzo", `changeprice-${Products.indexOf(product)}`), Markup.button.callback("Stock", `changestock-${Products.indexOf(product)}`)],
+            [Markup.button.callback("Visibilita", `changevis-${Products.indexOf(product)}`)],
+            [Markup.button.callback("↩️ Indietro", "editproduct")]
         ]
     }
     await Context.editMessageReplyMarkup(markup)
 })
 client.action(/^changename-\d{1,}/, async (Context) => {
     let index = Context.match[0].split("-")[1]
-    await Context.scene.enter("editname", {product: index})
+    await Context.scene.enter("editname", { product: index })
 })
 client.action(/^changeprice-\d{1,}/, async (Context) => {
     let index = Context.match[0].split("-")[1]
-    await Context.scene.enter("changeprice", {product: index})
+    await Context.scene.enter("editprice", { product: index })
 })
 client.action(/^changestock-\d{1,}/, async (Context) => {
     let index = Context.match[0].split("-")[1]
-    await Context.scene.enter("changestock", {product: index})
+    await Context.scene.enter("editstock", { product: index })
 })
+
 client.action(/^changevis-\d{1,}/, async (Context) => {
     let index = Context.match[0].split("-")[1]
-    await Context.scene.enter("changevis", {product: index})
+    await Context.editMessageText(`<b>Vuoi nascondere o mostrare il prodotto <code>${Products[index].name}</code>? (adesso è ${(Products[index].hidden) ? "nascosto" : "mostrato"})</b>`, { parse_mode: 'HTML' })
+    let markup = {
+        inline_keyboard: [
+            [Markup.button.callback("Nascondi", `hide-${Products.indexOf(Products[index])}`), Markup.button.callback("Mostra", `show-${Products.indexOf(Products[index])}`)]
+        ]
+    }
+    await Context.editMessageReplyMarkup(markup)
+})
+client.action(/^hide-\d{1,}/, async (Context) => {
+    let index = Context.match[0].split("-")[1]
+    Products[index].hidden = true
+    updateLocal()
+
+    await Context.editMessageText(`<b>Prodotto <code>${Products[index].name}</code> nascosto!</b>`, { parse_mode: 'HTML' })
+    let markup = {
+        inline_keyboard: [
+            [Markup.button.callback("↩️ Indietro", "editproduct")]
+        ]
+    }
+    await Context.editMessageReplyMarkup(markup)
+})
+client.action(/^show-\d{1,}/, async (Context) => {
+    let index = Context.match[0].split("-")[1]
+    Products[index].hidden = false
+    updateLocal()
+
+    await Context.editMessageText(`<b>Il prodotto <code>${Products[index].name}</code> è ora visibile!</b>`, { parse_mode: 'HTML' })
+    let markup = {
+        inline_keyboard: [
+            [Markup.button.callback("↩️ Indietro", "editproduct")]
+        ]
+    }
+    await Context.editMessageReplyMarkup(markup)
+})
+//#endregion
+
+//#region Action: add admin
+client.action("addadmin", async (Context) => {
+    await Context.scene.enter("addadmin")
+})
+//#endregion
+//#region Action: remove admin
+client.action("rmadmin", async (Context) => {
+    await Context.editMessageText(`<b>Seleziona l'amministratore da rimuovere:</b>`, { parse_mode: 'HTML' })
+
+    let keyboard = []
+    Config.administrators.forEach(async item => {
+        let username
+        await client.telegram.getChat(item)
+            .then(chat => username = chat.username)
+
+        keyboard.push([Markup.button.callback(`${username} (${item})`, `rmadmin-${Products.indexOf(item)}`)])
+    })
+    keyboard.push([Markup.button.callback("↩️ Indietro", "panel")])
+    let markup = {
+        inline_keyboard: keyboard
+    }
+    await Context.editMessageReplyMarkup(markup)
+})
+client.action(/^rmadmin-\d{1,}/, async (Context) => {
+    let index = Context.match[0].split("-")[1]
+    let username
+    client.telegram.getChat(Config.administrators[index])
+        .then(chat => username = chat.username)
+
+    await Context.editMessageText(`<b>Sei sicuro che voui rimuovere <code>${username} (${Config.administrators[index]})</code> dagli amministratori?</b>`, { parse_mode: 'HTML' })
+    let markup = {
+        inline_keyboard: [
+            [Markup.button.callback("✅", `adminrm-${Products.indexOf(Products[index])}`), Markup.button.callback("❌", "rmadmin")]
+        ]
+    }
+    await Context.editMessageReplyMarkup(markup)
+})
+client.action(/^adminrm-\d{1,}/, async (Context) => {
+    let index = Context.match[0].split("-")[1]
+    Config.administrators.splice(index, 1)
+    updateLocal()
+
+    await Context.editMessageText(`<b>Utente rimosso dalla lista degli amministratori!</b>`, { parse_mode: 'HTML' })
+    let markup = {
+        inline_keyboard: [
+            [Markup.button.callback("↩️ Indietro", "rmadmin")]
+        ]
+    }
+    await Context.editMessageReplyMarkup(markup)
+})
+//#endregion
+
+//#region MOTD
+client.action("motd", async (Context) => {
+    await Context.editMessageText(`Il MOTD corrente è: <code>${Config.motd}</code>`, { parse_mode: 'HTML' })
+
+    await Context.editMessageReplyMarkup({
+        inline_keyboard: [
+            [Markup.button.callback("Cambia", "editmotd"), Markup.button.callback("Rimuovi", "rmmotd")],
+            [Markup.button.callback("↩️ Indietro", "main")]
+        ]
+    })
+})
+client.action("editmotd", async (Context) => {
+    await Context.scene.enter("editmotd")
+})
+client.action("rmmotd", async (Context) => {
+    await Context.editMessageText(`<b>Sei sicuro di voler rimuovere il MOTD corrente?</b>`, { parse_mode: 'HTML' })
+    let markup = {
+        inline_keyboard: [
+            [Markup.button.callback("✅", `motdrm`), Markup.button.callback("❌", "motd")]
+        ]
+    }
+    await Context.editMessageReplyMarkup(markup)
+})
+client.action("motdrm", async (Context) => {
+    Config.motd = null
+    updateLocal()
+    await Context.editMessageText(`<b>MOTD rimosso!</b>`, { parse_mode: 'HTML' })
+    let markup = {
+        inline_keyboard: [
+            [Markup.button.callback("↩️ Indietro", "motd")]
+        ]
+    }
+    await Context.editMessageReplyMarkup(markup)
 })
 //#endregion
 //#endregion
