@@ -19,7 +19,7 @@ client.catch((err) => {
     })
 })
 
-const updateLocal = _ => {
+const updateFiles /* Aggiorna versioni locali dei file */ = _ => {
     writeFileSync("./config/config.json", JSON.stringify(Config))
     writeFileSync("./config/products.json", JSON.stringify(Products))
     writeFileSync("./config/users.json", JSON.stringify(Users))
@@ -41,7 +41,7 @@ const addProduct = new Scenes.WizardScene(
     },
     (ctx) => {
         productInfo.price = ctx.message.text
-        ctx.reply(`Inserisci la quantità di ${productInfo.name}:`)
+        ctx.reply(`Inserisci la quantità di ${productInfo.name} (-1 infinito, 0 terminato):`)
         return ctx.wizard.next()
     }, (ctx) => {
         productInfo.stock = ctx.message.text
@@ -50,7 +50,7 @@ const addProduct = new Scenes.WizardScene(
     }, (ctx) => {
         productInfo.hidden = (ctx.message.text == "1") ? true : false
         Products.push(productInfo)
-        updateLocal()
+        updateFiles()
         ctx.reply(`Aggiunto prodotto ${(productInfo.hidden) ? "nascosto" : "visibile"} ${productInfo.name} (x${productInfo.stock}) al prezzo di ${productInfo.price}!`)
         return ctx.scene.leave()
     },
@@ -63,7 +63,7 @@ const editName = new Scenes.WizardScene(
         return ctx.wizard.next()
     }, (ctx) => {
         Products[ctx.session.__scenes.state.product].name = ctx.message.text
-        updateLocal()
+        updateFiles()
         ctx.reply(`Modificato nome del prodotto in ${Products[ctx.session.__scenes.state.product].name}`)
         return ctx.scene.leave()
     },
@@ -76,7 +76,7 @@ const editPrice = new Scenes.WizardScene(
         return ctx.wizard.next()
     }, (ctx) => {
         Products[ctx.session.__scenes.state.product].price = ctx.message.text
-        updateLocal()
+        updateFiles()
         ctx.reply(`Modificato prezzo del prodotto in ${Products[ctx.session.__scenes.state.product].price}`)
         return ctx.scene.leave()
     },
@@ -85,11 +85,11 @@ const editPrice = new Scenes.WizardScene(
 const editStock = new Scenes.WizardScene(
     'editstock',
     (ctx) => {
-        ctx.reply("Inserisci la nuova quantità del prodotto:")
+        ctx.reply("Inserisci la nuova quantità del prodotto (-1 infinito, 0 terminato):")
         return ctx.wizard.next()
     }, (ctx) => {
         Products[ctx.session.__scenes.state.product].stock = ctx.message.text
-        updateLocal()
+        updateFiles()
         ctx.reply(`Modificata quantità del prodotto in ${Products[ctx.session.__scenes.state.product].stock}`)
         return ctx.scene.leave()
     },
@@ -104,13 +104,13 @@ const addAdmin = new Scenes.WizardScene(
     (ctx) => {
         id = ctx.message.text
         client.telegram.getChat(id)
-            .then(chat => { ctx.reply(`Sei sicuro di voler aggiungere ${chat.username} (${id}) alla lista di amministratori? (0 no, 1 si)`) }, { parse_mode: 'HTML' })
-            .catch(err => { ctx.reply(`Impossibile trovare l'utente, verifica che l'ID (non l'username) sia corretto! Esco...\n${err}`); ctx.scene.leave() }, { parse_mode: 'HTML' })
+            .then(chat => { ctx.reply(`Sei sicuro di voler aggiungere ${chat.username} (${id}) alla lista di amministratori? (0 no, 1 si)`) })
+            .catch(err => { ctx.reply(`Impossibile trovare l'utente, verifica che l'ID (non l'username) sia corretto! Esco.`, { parse_mode: 'HTML' }); ctx.scene.leave() })
         return ctx.wizard.next()
     }, (ctx) => {
         if (ctx.message.text == "1") {
             Config.administrators.push(id)
-            updateLocal()
+            updateFiles()
             ctx.reply(`Utente aggiunto alla lista degli amministratori!`)
         } else {
             ctx.reply(`OK, utente NON aggiunto!`)
@@ -126,7 +126,7 @@ const editMotd = new Scenes.WizardScene(
         return ctx.wizard.next()
     }, (ctx) => {
         Config.motd = ctx.message.text
-        updateLocal()
+        updateFiles()
         ctx.reply(`Nuovo MOTD impostato!`)
         return ctx.scene.leave()
     },
@@ -145,8 +145,8 @@ const setCredit = new Scenes.WizardScene(
     },
     (ctx) => {
         var credit = ctx.message.text
-        Users[ctx.session.__scenes.state.userindex].balance = credit
-        updateLocal()
+        Users[ctx.session.__scenes.state.userindex].balance = parseFloat(credit)
+        updateFiles()
         ctx.reply(`Credito dell'utente impostato a ${Users[ctx.session.__scenes.state.userindex].balance}${Config.currency}`)
         return ctx.scene.leave()
     }
@@ -165,8 +165,8 @@ const addCredit = new Scenes.WizardScene(
     },
     (ctx) => {
         var credit = ctx.message.text
-        Users[ctx.session.__scenes.state.userindex].balance += credit
-        updateLocal()
+        Users[ctx.session.__scenes.state.userindex].balance += parseFloat(credit)
+        updateFiles()
         ctx.reply(`Credito dell'utente dopo l'aggiunta: ${Users[ctx.session.__scenes.state.userindex].balance}${Config.currency}`)
         return ctx.scene.leave()
     }
@@ -185,9 +185,9 @@ const rmCredit = new Scenes.WizardScene(
     },
     (ctx) => {
         var credit = ctx.message.text
-        Users[ctx.session.__scenes.state.userindex].balance -= credit
-        updateLocal()
-        ctx.reply(`Credito dell'utente dopo l'aggiunta: ${Users[ctx.session.__scenes.state.userindex].balance}${Config.currency}`)
+        Users[ctx.session.__scenes.state.userindex].balance -= parseFloat(credit)
+        updateFiles()
+        ctx.reply(`Credito dell'utente dopo la rimozione: ${Users[ctx.session.__scenes.state.userindex].balance}${Config.currency}`)
         return ctx.scene.leave()
     }
 )
@@ -199,7 +199,7 @@ client.use(new Scenes.Stage([addProduct, editName, editPrice, editStock, addAdmi
 // #region Start Command
 client.start(async (Context) => {
     if (Config.bans.includes(Context.chat.id)) return
-    updateLocal()
+    updateFiles()
     if (!Users.find(usr => usr.id == Context.from.id)) {
         Users.push({id: Context.from.id, balance: 0})
     }
@@ -244,9 +244,9 @@ client.action("main", async (Context) => {
 // #region Menu Actions
 client.action("products", async (Context) => {
     if (Config.bans.includes(Context.chat.id)) return
-    let message = `💵 <b>Grana:</b> <code>${Users.find(usr => usr.id == Context.from.id).balance}${Config.currency}</code>\n📚 <b>${Config.shopName} Products:</b>\n\n`
+    let message = `📚 <b>Prodotti di ${Config.shopName}\n</b>💰 <b>Grana:</b> <code>${Users.find(usr => usr.id == Context.from.id).balance}${Config.currency}</code>\n\n`
     Products.forEach(item => {
-        if (item.hidden && !Config.administrators.includes(Context.from.id)) return
+        if (item.hidden || !Config.administrators.includes(Context.from.id)) return
 
         let stock = item.stock
         if (item.stock == 0) {
@@ -254,7 +254,7 @@ client.action("products", async (Context) => {
         } else if (item.stock == -1) {
             stock = "UNLIMITED"
         }
-        message += `<b>‼️ ${item.name}</b>\n<b>💸 Prezzo:</b> <code>${item.price}$</code>\n🎰 Stock: <code>${stock}</code>\n\n`
+        message += `<b>‼️ ${item.name}</b>\n💸 Prezzo: <code>${item.price}$</code>\n🎰 Stock: <code>${stock}</code>\n\n`
     })
     await Context.editMessageText(message, { parse_mode: 'HTML' })
 
@@ -270,10 +270,9 @@ client.action("products", async (Context) => {
 client.action("account", async (Context) => {
     if (Config.bans.includes(Context.chat.id)) return
     let pisello = Math.floor(Math.random() * 20)
-    await Context.editMessageText(`👤 Username <code>${Context.from.username}</code>${(Config.administrators.includes(Context.from.id)) ? " <b>(caldo)</b>" : ""}
+    await Context.editMessageText(`👤 Username <code>${Context.from.username}</code>${(Config.administrators.includes(Context.from.id)) ? " <b>(amministratore)</b>" : ""}
 🆔 <b>ID:</b> <code>${Context.from.id}</code>
 💵 <b>Grana:</b> <code>${Users.find(usr => usr.id == Context.from.id).balance}${Config.currency}</code>
-🛒 <b>Ordini effettuati:</b> <code>${Users.find(usr => usr.id == Context.from.id).orders.length}</code>
 📏 <b>Pisello (variabile):</b> <code>${pisello}cm ${(pisello > 10) ? "😱" : "😮‍💨"}</code>`, { parse_mode: 'HTML' })
 
     await Context.editMessageReplyMarkup({
@@ -302,14 +301,15 @@ client.action("panel", async (Context) => {
 
     let markup = {
         inline_keyboard: [
-            [Markup.button.callback("Aggiungi Prodotto", "addproduct"),
-            Markup.button.callback("Rimuovi Prodotto", "rmproduct"),
-            Markup.button.callback("Modifica Prodotto", "editproduct")],
-            [Markup.button.callback("Gestisci Utenti", "manageusers")],
-            [Markup.button.callback("Aggiungi Admin", "addadmin"),
-            Markup.button.callback("Rimuovi Admin", "rmadmin")],
-            [Markup.button.callback("Trasmetti messaggio", "broadcast")],
-            [Markup.button.callback("Modifica MOTD", "motd")],
+            [Markup.button.callback("➕ Aggiungi Prodotto", "addproduct"),
+            Markup.button.callback("❌ Rimuovi Prodotto", "rmproduct")],
+            [Markup.button.callback("✍️ Modifica Prodotto", "editproduct")],
+            [Markup.button.callback("➕ Aggiungi Admin", "addadmin"),
+            Markup.button.callback("❌ Rimuovi Admin", "rmadmin")],
+            [Markup.button.callback("👥 Gestione Utenti", "manageusers")],
+            [Markup.button.callback("🔄 Aggiorna Variabili", "refreshvars")], 
+            [Markup.button.callback("📣 Trasmetti messaggio", "broadcast")],
+            [Markup.button.callback("📝 Modifica MOTD", "motd")],
             [Markup.button.callback("↩️ Indietro", "main")]
         ]
     }
@@ -319,14 +319,14 @@ client.action("panel", async (Context) => {
 // #endregion
 
 //#region Panel Actions
-//#region Action: add product
+//#region Action: aggiungi prodotto
 client.action("addproduct", async (Context) => {
     if (Config.bans.includes(Context.chat.id)) return
     if (!Config.administrators.includes(Context.chat.id)) return
     await Context.scene.enter("addproduct")
 })
 //#endregion
-//#region Action: remove product
+//#region Azione: rimuovi prodotto
 client.action("rmproduct", async (Context) => {
     if (Config.bans.includes(Context.chat.id)) return
     if (!Config.administrators.includes(Context.chat.id)) return
@@ -346,7 +346,7 @@ client.action(/^rmproduct-\d{1,}/, async (Context) => {
     if (Config.bans.includes(Context.chat.id)) return
     if (!Config.administrators.includes(Context.chat.id)) return
     let index = Context.match[0].split("-")[1]
-    await Context.editMessageText(`<b>Sei sicuro che vuoi eliminare il prodotto <code>${Products[index].name}</code>?</b>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`<b>Sei sicuro che vuoi eliminare il prodotto? <code>nome: ${Products[index].name}</code>\n<code>prezzo: ${Products[index].price}</code>\n<code>stock: ${Products[index].stock}</code>\n<code>visibiltà: ${(Products[index].hidden ? "nascosto" : "visibile")}</code></b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("✅", `productrm-${Products.indexOf(Products[index])}`), Markup.button.callback("❌", "rmproduct")]
@@ -359,7 +359,8 @@ client.action(/^productrm-\d{1,}/, async (Context) => {
     if (!Config.administrators.includes(Context.chat.id)) return
     let index = Context.match[0].split("-")[1]
     delete Products[index]
-    updateLocal()
+    Products = Products.filter(Number) // Rimuove elementi null
+    updateFiles()
 
     await Context.editMessageText(`<b>Prodotto eliminato!</b>`, { parse_mode: 'HTML' })
     let markup = {
@@ -370,7 +371,7 @@ client.action(/^productrm-\d{1,}/, async (Context) => {
     await Context.editMessageReplyMarkup(markup)
 })
 //#endregion
-//#region Action: edit product
+//#region Azione: modifica prodotto
 client.action("editproduct", async (Context) => {
     if (Config.bans.includes(Context.chat.id)) return
     if (!Config.administrators.includes(Context.chat.id)) return
@@ -391,7 +392,7 @@ client.action(/^editproduct-\d{1,}/, async (Context) => {
     if (!Config.administrators.includes(Context.chat.id)) return
     let index = Context.match[0].split("-")[1]
     let product = Products[index]
-    await Context.editMessageText(`<b>Cosa vuoi cambiare del prodotto <code>${product.name}</code>?</b>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`<b>Cosa vuoi cambiare del prodotto?\n<code>nome: ${Products[index].name}</code>\n<code>prezzo: ${Products[index].price}</code>\n<code>stock: ${Products[index].stock}</code>\n<code>visibiltà: ${(Products[index].hidden ? "nascosto" : "visibile")}</code></b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("Nome", `changename-${Products.indexOf(product)}`), Markup.button.callback("Prezzo", `changeprice-${Products.indexOf(product)}`), Markup.button.callback("Stock", `changestock-${Products.indexOf(product)}`)],
@@ -437,7 +438,7 @@ client.action(/^hide-\d{1,}/, async (Context) => {
     if (!Config.administrators.includes(Context.chat.id)) return
     let index = Context.match[0].split("-")[1]
     Products[index].hidden = true
-    updateLocal()
+    updateFiles()
 
     await Context.editMessageText(`<b>Prodotto <code>${Products[index].name}</code> nascosto!</b>`, { parse_mode: 'HTML' })
     let markup = {
@@ -452,7 +453,7 @@ client.action(/^show-\d{1,}/, async (Context) => {
     if (!Config.administrators.includes(Context.chat.id)) return
     let index = Context.match[0].split("-")[1]
     Products[index].hidden = false
-    updateLocal()
+    updateFiles()
 
     await Context.editMessageText(`<b>Il prodotto <code>${Products[index].name}</code> è ora visibile!</b>`, { parse_mode: 'HTML' })
     let markup = {
@@ -545,34 +546,34 @@ client.action(/^userban-\d{1,}/, async (Context) => {
     if (!Config.administrators.includes(Context.chat.id)) return
     let index = Context.match[0].split("-")[1]
     Config.bans.push(Users[index].id)
-    updateLocal()
+    updateFiles()
 
     await Context.editMessageText(`<b>Utente bandito dal bot!</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
-            [Markup.button.callback("↩️ Indietro", "manageuser")]
+            [Markup.button.callback("↩️ Indietro", `manageuser-${index}`)]
         ]
     }
     await Context.editMessageReplyMarkup(markup)
 })
 //#endregion
 
-//#region Action: add admin
+//#region Azione: aggiungi amministratore
 client.action("addadmin", async (Context) => {
     if (Config.bans.includes(Context.chat.id)) return
     if (!Config.administrators.includes(Context.chat.id)) return
     await Context.scene.enter("addadmin")
 })
 //#endregion
-//#region Action: remove admin
+//#region Azione: rimuovi amministratore
 client.action("rmadmin", async (Context) => {
     if (Config.bans.includes(Context.chat.id)) return
     if (!Config.administrators.includes(Context.chat.id)) return
     await Context.editMessageText(`<b>Seleziona l'amministratore da rimuovere:</b>`, { parse_mode: 'HTML' })
 
     let keyboard = []
-    Config.administrators.forEach(async item => {
-        keyboard.push([Markup.button.callback(`${item}`, `rmadmin-${Products.indexOf(item)}`)])
+    Config.administrators.forEach(item => {
+        keyboard.push([Markup.button.callback(item, `rmadmin-${Config.administrators.indexOf(item)}`)])
     })
     keyboard.push([Markup.button.callback("↩️ Indietro", "panel")])
     let markup = {
@@ -581,6 +582,7 @@ client.action("rmadmin", async (Context) => {
     await Context.editMessageReplyMarkup(markup)
 })
 client.action(/^rmadmin-\d{1,}/, async (Context) => {
+    console.log(1)
     if (Config.bans.includes(Context.chat.id)) return
     if (!Config.administrators.includes(Context.chat.id)) return
     let index = Context.match[0].split("-")[1]
@@ -591,7 +593,7 @@ client.action(/^rmadmin-\d{1,}/, async (Context) => {
     await Context.editMessageText(`<b>Sei sicuro che voui rimuovere <code>${username} (${Config.administrators[index]})</code> dagli amministratori?</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
-            [Markup.button.callback("✅", `adminrm-${Products.indexOf(Products[index])}`), Markup.button.callback("❌", "rmadmin")]
+            [Markup.button.callback("✅", `adminrm-${Config.administrators.indexOf(Config.administrators[index])}`), Markup.button.callback("❌", "rmadmin")]
         ]
     }
     await Context.editMessageReplyMarkup(markup)
@@ -601,7 +603,7 @@ client.action(/^adminrm-\d{1,}/, async (Context) => {
     if (!Config.administrators.includes(Context.chat.id)) return
     let index = Context.match[0].split("-")[1]
     Config.administrators.splice(index, 1)
-    updateLocal()
+    updateFiles()
 
     await Context.editMessageText(`<b>Utente rimosso dalla lista degli amministratori!</b>`, { parse_mode: 'HTML' })
     let markup = {
@@ -622,7 +624,7 @@ client.action("motd", async (Context) => {
     await Context.editMessageReplyMarkup({
         inline_keyboard: [
             [Markup.button.callback("Cambia", "editmotd"), Markup.button.callback("Rimuovi", "rmmotd")],
-            [Markup.button.callback("↩️ Indietro", "main")]
+            [Markup.button.callback("↩️ Indietro", "panel")]
         ]
     })
 })
@@ -646,7 +648,7 @@ client.action("motdrm", async (Context) => {
     if (Config.bans.includes(Context.chat.id)) return
     if (!Config.administrators.includes(Context.chat.id)) return
     Config.motd = null
-    updateLocal()
+    updateFiles()
     await Context.editMessageText(`<b>MOTD rimosso!</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
