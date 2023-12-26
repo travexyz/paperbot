@@ -1,6 +1,6 @@
 // #region Envoirment Configuation
 require('dotenv').config()
-const { writeFileSync } = require('fs')
+const { writeFileSync, readFileSync } = require('fs')
 var Config = require("./config/config.json")
 var Products = require("./config/products.json")
 var Users = require("./config/users.json")
@@ -270,7 +270,7 @@ client.action("products", async (Context) => {
 client.action("account", async (Context) => {
     if (Config.bans.includes(Context.chat.id)) return
     let pisello = Math.floor(Math.random() * 20)
-    await Context.editMessageText(`👤 Username <code>${Context.from.username}</code>${(Config.administrators.includes(Context.from.id)) ? " <b>(amministratore)</b>" : ""}
+    await Context.editMessageText(`👤 <b>Username</b> <code>${Context.from.username}</code>${(Config.administrators.includes(Context.from.id)) ? " <i>amministratore</i>" : ""}
 🆔 <b>ID:</b> <code>${Context.from.id}</code>
 💵 <b>Grana:</b> <code>${Users.find(usr => usr.id == Context.from.id).balance}${Config.currency}</code>
 📏 <b>Pisello (variabile):</b> <code>${pisello}cm ${(pisello > 10) ? "😱" : "😮‍💨"}</code>`, { parse_mode: 'HTML' })
@@ -614,6 +614,33 @@ client.action(/^adminrm-\d{1,}/, async (Context) => {
     await Context.editMessageReplyMarkup(markup)
 })
 //#endregion
+
+client.action("refreshvars", async (Context) => {
+    if (Config.bans.includes(Context.chat.id)) return
+    if (!Config.administrators.includes(Context.chat.id)) return
+    await Context.editMessageText(`<b>Sei sicuro di voler aggiornare le variabili dai file?</b>\n<b>⚠️ Esegui questo comando solo se sai bene cosa stai facendo!</b>`, { parse_mode: 'HTML' })
+    let markup = {
+        inline_keyboard: [
+            [Markup.button.callback("✅", `varsrefresh`), Markup.button.callback("❌", "panel")]
+        ]
+    }
+    await Context.editMessageReplyMarkup(markup)
+})
+
+client.action("varsrefresh", async (Context) => {
+    if (Config.bans.includes(Context.chat.id)) return
+    if (!Config.administrators.includes(Context.chat.id)) return
+    Config = readFileSync("./config/config.json")
+    Products = readFileSync("./config/products.json")
+    Users = readFileSync("./config/users.json")
+    await Context.editMessageText(`<b>Variabili aggiornate!</b>`, { parse_mode: 'HTML' })
+    let markup = {
+        inline_keyboard: [
+            [ Markup.button.callback("↩️ Indietro", "panel")]
+        ]
+    }
+    await Context.editMessageReplyMarkup(markup)
+})
 
 //#region MOTD
 client.action("motd", async (Context) => {
