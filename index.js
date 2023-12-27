@@ -1,3 +1,5 @@
+// TODO: support chat, better user config bans and product management using DB.
+
 // #region Envoirment Configuation
 require('dotenv').config()
 const { writeFileSync, readFileSync } = require('fs')
