@@ -18,6 +18,8 @@
   "homepage": "https://github.com/AnonHexo/paperBot#readme",
   "dependencies": {
     "dotenv": "^16.0.3",
+    "lru-cache": "^10.1.0",
+    "mysql2": "^3.6.5",
     "telegraf": "^4.12.2"
   }
 }
