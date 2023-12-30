@@ -584,17 +584,24 @@ client.action(/^manageuser-\d{1,}/, async (Context) => {
     const Users = (await getUsers())[0]
     const user = Users.find(usr => usr.userID == Context.chat.id)
     if (user.banned) return
-
     if (!user.admin) return
-    let username
-    await client.telegram.getChat(user.userID)
-        .then(chat => username = chat.username)
+    var id = Context.match[0].split("-")[1]
+    victim_user = (await pool.query(`SELECT * FROM users WHERE id=${id}`))[0][0]
+    var username
+    await client.telegram.getChat(victim_user.userID)
+        .then(chat => {
+            if (!chat.username) {
+                username = chat.first_name + " " + ((chat.last_name) ? chat.last_name : "(no username)")
+            } else {
+                username = chat.username
+            }
+        })
 
-    await Context.editMessageText(`<b>‼️ Utente</b> <code>${username}</code> <code>(${user.userID})</code>\n💵 <b>Grana:</b> <code>${user.balance}${Config.currency}</code>\n🛠️ <b>Amministratore:</b> <code>${(user.admin) ? "Yes" : "No"}</code>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`<b>‼️ Utente</b> <code>${username}</code>\nID: <code>${victim_user.userID}</code>\n💵 <b>Grana:</b> <code>${victim_user.balance}${Config.currency}</code>\n🛠️ <b>Amministratore:</b> <code>${(victim_user.admin) ? "Yes" : "No"}</code>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
-            [Markup.button.callback("Imposta Credito", `setcredit-${user.id}`), Markup.button.callback("Aggiungi Credito", `addcredit-${user.id}`), Markup.button.callback("Rimuovi Credito", `rmcredit-${user.id}`)],
-            [Markup.button.callback("Bandisci", `banuser-${user.id}`)],
+            [Markup.button.callback("Imposta Credito", `setcredit-${victim_user.id}`), Markup.button.callback("Aggiungi Credito", `addcredit-${victim_user.id}`), Markup.button.callback("Rimuovi Credito", `rmcredit-${victim_user.id}`)],
+            [Markup.button.callback("Bandisci", `banuser-${victim_user.id}`)],
             [Markup.button.callback("↩️ Indietro", "manageusers")]
         ]
     }
@@ -636,9 +643,15 @@ client.action(/^banuser-\d{1,}/, async (Context) => {
     if (!user.admin) return
     let id = Context.match[0].split("-")[1]
     const victim_user = (await pool.query(`SELECT * FROM users WHERE id=${id}`))[0][0]
-    let username
+    var username
     await client.telegram.getChat(victim_user.userID)
-        .then(chat => username = chat.username)
+        .then(chat => {
+            if (!chat.username) {
+                username = chat.first_name + " " + ((chat.last_name) ? chat.last_name : "(no username)")
+            } else {
+                username = chat.username
+            }
+        })
 
     await Context.editMessageText(`<b>Sei sicuro di voler bandire <code>${username} (${victim_user.userID})</code> dall'utilizzo del bot?</b>`, { parse_mode: 'HTML' })
     let markup = {
