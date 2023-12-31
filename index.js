@@ -22,10 +22,8 @@ const {
 const client = new Telegraf(process.env.TOKEN)
 client.catch(async (e) => {
     console.error(e)
-    await new Promise(async (resolve, reject) => {
-        const results = await pool.query("SELECT * FROM users WHERE admin=TRUE")
-        results.forEach(admin => { client.telegram.sendMessage(admin.userID, `Errore: \`\`\`${e}\`\`\``, { parse_mode: "MarkdownV2" }) })
-    })
+    await pool.query("SELECT * FROM users WHERE admin=TRUE")
+    results.forEach(admin => { client.telegram.sendMessage(admin.userID, `Errore: \`\`\`${e}\`\`\``, { parse_mode: "MarkdownV2" }) })
 
 })
 
@@ -61,7 +59,7 @@ const addProduct = new Scenes.WizardScene(
         return ctx.wizard.next()
     }, async (ctx) => {
         productInfo.visible = (ctx.message.text == "0") ? true : false
-        await pool.query(`INSERT INTO products (name, price, stock, visible) VALUES ('${productInfo.name}', ${productInfo.price}, ${productInfo.stock}, ${(productInfo.visible) ? "TRUE" : "FALSE"})`)
+        await pool.query(`INSERT INTO products (name, price, stock, visible) VALUES (?, ?, ?, ?)`, [`${productInfo.name}`, productInfo.price, productInfo.stock, ((productInfo.visible) ? 1 : 0)])
         if (debug) console.warn(`${Date.now()} product added. product name: ${productInfo.name}`)
         ctx.reply(`Prodotto aggiunto!`)
         return ctx.scene.leave()
@@ -74,7 +72,7 @@ const editName = new Scenes.WizardScene(
         ctx.reply("Inserisci il nuovo nome del prodotto:")// 
         return ctx.wizard.next()
     }, async (ctx) => {
-        await pool.query(`UPDATE products SET name='${ctx.message.text}' WHERE id=${ctx.session.__scenes.state.productId}`)
+        await pool.query(`UPDATE products SET name=? WHERE id=?`, [`${ctx.message.text}`, `${ctx.session.__scenes.state.productId}`])
         if (debug) console.warn(`${Date.now()} product name changed (${ctx.message.text}). victim product key: ${ctx.session.__scenes.state.productId}`)
         ctx.reply(`Modificato nome del prodotto in ${ctx.message.text}`)
         return ctx.scene.leave()
@@ -87,7 +85,7 @@ const editPrice = new Scenes.WizardScene(
         ctx.reply("Inserisci il nuovo prezzo del prodotto:")
         return ctx.wizard.next()
     }, async (ctx) => {
-        await pool.query(`UPDATE products SET price=${ctx.message.text} WHERE id=${ctx.session.__scenes.state.productId}`)
+        await pool.query(`UPDATE products SET price=? WHERE id=?`, [`${ctx.message.text}`, `${ctx.session.__scenes.state.productId}`])
         if (debug) console.warn(`${Date.now()} product price changed (${ctx.message.text}). victim product key: ${ctx.session.__scenes.state.productId}`)
         ctx.reply(`Modificato prezzo del prodotto in ${ctx.message.text}`)
         return ctx.scene.leave()
@@ -100,7 +98,7 @@ const editStock = new Scenes.WizardScene(
         ctx.reply("Inserisci la nuova quantità del prodotto (-1 infinito, 0 terminato):")
         return ctx.wizard.next()
     }, async (ctx) => {
-        await pool.query(`UPDATE products SET stock=${ctx.message.text} WHERE id=${ctx.session.__scenes.state.productId}`)
+        await pool.query(`UPDATE products SET stock=? WHERE id=?`, [`${ctx.message.text}`, `${ctx.session.__scenes.state.productId}`])
         if (debug) console.warn(`${Date.now()} product stock changed (${ctx.message.text}). victim product key: ${ctx.session.__scenes.state.productId}`)
         ctx.reply(`Modificata quantità del prodotto in ${ctx.message.text}`)
         return ctx.scene.leave()
@@ -121,7 +119,7 @@ const addAdmin = new Scenes.WizardScene(
         return ctx.wizard.next()
     }, async (ctx) => {
         if (ctx.message.text == "1") {
-            await pool.query(`UPDATE users SET admin=TRUE WHERE id=${id}`)
+            await pool.query(`UPDATE users SET admin=TRUE WHERE id=?`, [id])
             if (debug) console.warn(`${Date.now()} user added as admin. victim user key: ${id}`)
             ctx.reply(`Utente aggiunto alla lista degli amministratori!`)
         } else {
@@ -134,12 +132,12 @@ const addAdmin = new Scenes.WizardScene(
 const editMotd = new Scenes.WizardScene(
     'editmotd',
     (ctx) => {
-        ctx.reply("Inserisci il nuovo MOTD da visualizzare:")
+        ctx.reply("Inserisci il nuovo Messaggio del Giorno da visualizzare:")
         return ctx.wizard.next()
     }, async (ctx) => {
-        await pool.query(`UPDATE config SET motd='${ctx.message.text}'`)
+        await pool.query(`UPDATE config SET motd=?`, [`${ctx.message.text}`])
         if (debug) console.warn(`${Date.now()} motd edited. author user telegram id ${ctx.from.id}`)
-        ctx.reply(`Nuovo MOTD impostato!`)
+        ctx.reply(`Nuovo Messaggio del Giorno impostato!`)
         return ctx.scene.leave()
     },
 )
@@ -150,7 +148,7 @@ const editShopName = new Scenes.WizardScene(
         ctx.reply("Inserisci il nuovo nome dello shop da visualizzare:")
         return ctx.wizard.next()
     }, async (ctx) => {
-        await pool.query(`UPDATE config SET shopname='${ctx.message.text}'`)
+        await pool.query(`UPDATE config SET shopname=?`, [`${ctx.message.text}`])
         if (debug) console.warn(`${Date.now()} shopname edited. author user telegram id ${ctx.from.id}`)
         ctx.reply(`Nuovo nome shop impostato!`)
         return ctx.scene.leave()
@@ -171,7 +169,7 @@ const setCredit = new Scenes.WizardScene(
     },
     async (ctx) => {
         var credit = ctx.message.text
-        await pool.query(`UPDATE users SET balance=${parseFloat(credit)} WHERE id=${ctx.session.__scenes.state.id}`)
+        await pool.query(`UPDATE users SET balance=? WHERE id=?`, [parseFloat(credit), ctx.session.__scenes.state.id])
         if (debug) console.warn(`${Date.now()} user credit changed to ${parseFloat(credit)}. victim user key: ${ctx.session.__scenes.state.id}, author user telegram id: ${ctx.from.id}`)
         ctx.reply(`Credito dell'utente impostato a ${credit}`)
         return ctx.scene.leave()
@@ -194,7 +192,7 @@ const addCredit = new Scenes.WizardScene(
         const Users = (await getUsers())[0]
         var user = Users.find(usr => usr.id == ctx.session.__scenes.state.id)
         var credit = user.balance + (parseFloat(ctx.message.text))
-        await pool.query(`UPDATE users SET balance=${credit} WHERE id=${ctx.session.__scenes.state.id}`)
+        await pool.query(`UPDATE users SET balance=? WHERE id=?`, [credit, ctx.session.__scenes.state.id])
         if (debug) console.warn(`${Date.now()} user credit changed (${parseFloat(credit)}). victim user key: ${ctx.session.__scenes.state.id}, author user telegram id: ${ctx.from.id}`)
         ctx.reply(`Credito dell'utente dopo l'aggiunta: ${credit}`)
         return ctx.scene.leave()
@@ -217,7 +215,7 @@ const rmCredit = new Scenes.WizardScene(
         const Users = (await getUsers())[0]
         var user = Users.find(usr => usr.id == ctx.session.__scenes.state.id)
         var credit = user.balance - (parseFloat(ctx.message.text))
-        await pool.query(`UPDATE users SET balance=${credit} WHERE id=${ctx.session.__scenes.state.id}`)
+        await pool.query(`UPDATE users SET balance=? WHERE id=?`, [credit, ctx.session.__scenes.state.id])
         if (debug) console.warn(`${Date.now()} user credit changed (${parseFloat(credit)}). victim user key: ${ctx.session.__scenes.state.id}, author user telegram id: ${ctx.from.id}`)
         ctx.reply(`Credito dell'utente dopo la rimozione: ${credit}`)
         return ctx.scene.leave()
@@ -233,13 +231,12 @@ client.start(async (Context) => {
     const Users = (await getUsers())[0]
     const user = Users.find(usr => usr.userID == Context.chat.id)
     if (!user) {
-        await pool.query(`INSERT INTO users (userID, balance, admin, banned) VALUES (${Context.chat.id}, 0.00, 0, 0)`)
+        await pool.query(`INSERT INTO users (userID, balance, admin, banned) VALUES (?, 0.00, 0, 0)`, [Context.chat.id])
         if (debug) console.warn(`${Date.now()} new user added to db. user telegram id: ${Context.chat.id}`)
     } else {
         if (user.banned) return
     }
     const Config = (await pool.query(`SELECT * FROM config`))[0][0]
-    console.log(Config)
     Context.reply(`*${Config.shopname} Bot — Creato da ||travexyz||*`, {
         parse_mode: "MarkdownV2",
         ...Markup.inlineKeyboard([[Markup.button.callback("👽 Entra", "main")]])
@@ -364,9 +361,9 @@ client.action("panel", async (Context) => {
             [Markup.button.callback("✍️ Modifica Prodotto", "editproduct")],
             [Markup.button.callback("➕ Aggiungi Admin", "addadmin"),
             Markup.button.callback("❌ Rimuovi Admin", "rmadmin")],
-            [Markup.button.callback("👥 Gestione Utenti", "manageusers")],
-            [Markup.button.callback("📣 Trasmetti messaggio", "broadcast")],
-            [Markup.button.callback("📝 Bot Config", "config")],
+            [Markup.button.callback("👥 Gestisci Utenti", "manageusers")],
+            //[Markup.button.callback("📣 Trasmetti messaggio", "broadcast")],
+            [Markup.button.callback("📝 Configurazione Bot", "config")],
             [Markup.button.callback("↩️ Indietro", "main")]
         ]
     }
@@ -413,7 +410,7 @@ client.action(/^rmproduct-\d{1,}/, async (Context) => {
     if (!user.admin) return
 
     let id = Context.match[0].split("-")[1]
-    var product = (await pool.query(`SELECT * FROM products WHERE id=${id}`))[0][0]
+    var product = (await pool.query(`SELECT * FROM products WHERE id=?`, [id]))[0][0]
 
     await Context.editMessageText(`<b>Sei sicuro che vuoi eliminare il prodotto? <code>nome: ${product.name}</code>\n<code>prezzo: ${product.price}</code>\n<code>stock: ${product.stock}</code>\n<code>visibiltà: ${(product.visible ? "mostrato" : "nascosto")}</code></b>`, { parse_mode: 'HTML' })
     let markup = {
@@ -431,7 +428,7 @@ client.action(/^productrm-\d{1,}/, async (Context) => {
     if (!user.admin) return
 
     let id = Context.match[0].split("-")[1]
-    await pool.query(`DELETE FROM products WHERE id=${id}`)
+    await pool.query(`DELETE FROM products WHERE id=?`, [id])
     if (debug) console.warn(`${Date.now()} product deleted. victim product key: ${id}, author user key: ${user.id}`)
     await Context.editMessageText(`<b>Prodotto eliminato!</b>`, { parse_mode: 'HTML' })
     let markup = {
@@ -470,7 +467,7 @@ client.action(/^editproduct-\d{1,}/, async (Context) => {
     if (!user.admin) return
 
     let id = Context.match[0].split("-")[1]
-    var product = (await pool.query(`SELECT * FROM products WHERE id=${id}`))[0][0]
+    var product = (await pool.query(`SELECT * FROM products WHERE id=?`, [id]))[0][0]
     await Context.editMessageText(`<b>Cosa vuoi cambiare del prodotto?\n<code>nome: ${product.name}</code>\n<code>prezzo: ${product.price}</code>\n<code>stock: ${product.stock}</code>\n<code>visibiltà: ${(product.visible ? "mostrato" : "nascosto")}</code></b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
@@ -518,7 +515,7 @@ client.action(/^changevis-\d{1,}/, async (Context) => {
 
     let id = Context.match[0].split("-")[1]
     var product
-    product = (await pool.query(`SELECT * FROM products WHERE id=${id}`))[0][0]
+    product = (await pool.query(`SELECT * FROM products WHERE id=?`, [id]))[0][0]
     await Context.editMessageText(`<b>Vuoi nascondere o mostrare il prodotto <code>${product.name}</code>? (adesso è ${(product.visible) ? "mostrato" : "nascosto"})</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
@@ -536,7 +533,7 @@ client.action(/^hide-\d{1,}/, async (Context) => {
 
     let id = Context.match[0].split("-")[1]
 
-    await pool.query(`UPDATE products SET visible=FALSE WHERE id=${id}`)
+    await pool.query(`UPDATE products SET visible=FALSE WHERE id=?`, [id])
 
     await Context.editMessageText(`<b>Prodotto nascosto!</b>`, { parse_mode: 'HTML' })
     let markup = {
@@ -555,7 +552,7 @@ client.action(/^show-\d{1,}/, async (Context) => {
 
     let id = Context.match[0].split("-")[1]
 
-    await pool.query(`UPDATE products SET visible=TRUE WHERE id=${id}`)
+    await pool.query(`UPDATE products SET visible=TRUE WHERE id=?`, [id])
 
     await Context.editMessageText(`<b>Il prodotto è ora visibile!</b>`, { parse_mode: 'HTML' })
     let markup = {
@@ -599,7 +596,7 @@ client.action(/^manageuser-\d{1,}/, async (Context) => {
     if (!user.admin) return
     const Config = (await pool.query(`SELECT * FROM config`))[0][0]
     var id = Context.match[0].split("-")[1]
-    victim_user = (await pool.query(`SELECT * FROM users WHERE id=${id}`))[0][0]
+    victim_user = (await pool.query(`SELECT * FROM users WHERE id=?`, [id]))[0][0]
     var username
     await client.telegram.getChat(victim_user.userID)
         .then(chat => {
@@ -655,7 +652,7 @@ client.action(/^banuser-\d{1,}/, async (Context) => {
     if (user.banned) return
     if (!user.admin) return
     let id = Context.match[0].split("-")[1]
-    const victim_user = (await pool.query(`SELECT * FROM users WHERE id=${id}`))[0][0]
+    const victim_user = (await pool.query(`SELECT * FROM users WHERE id=?`, [id]))[0][0]
     var username
     await client.telegram.getChat(victim_user.userID)
         .then(chat => {
@@ -680,7 +677,7 @@ client.action(/^userban-\d{1,}/, async (Context) => {
     if (user.banned) return
     if (!user.admin) return
     let id = Context.match[0].split("-")[1]
-    pool.query(`UPDATE users SET banned=TRUE WHERE id=${id}`)
+    pool.query(`UPDATE users SET banned=TRUE WHERE id=?`, [id])
 
     if (debug) console.warn(`${Date.now()} user banned from bot. victim user key: ${id}, author user key: ${user.id}`)
     await Context.editMessageText(`<b>Utente bandito dal bot!</b>`, { parse_mode: 'HTML' })
@@ -730,7 +727,7 @@ client.action(/^rmadmin-\d{1,}/, async (Context) => {
     if (user.banned) return
     if (!user.admin) return
     let id = Context.match[0].split("-")[1]
-    const victim_user = (await pool.query(`SELECT * FROM users WHERE id=${id}`))[0][0]
+    const victim_user = (await pool.query(`SELECT * FROM users WHERE id=?`, [id]))[0][0]
     var username
     await client.telegram.getChat(victim_user.userID)
         .then(chat => {
@@ -755,7 +752,7 @@ client.action(/^adminrm-\d{1,}/, async (Context) => {
     if (user.banned) return
     if (!user.admin) return
     let id = Context.match[0].split("-")[1]
-    await pool.query(`UPDATE users SET admin=FALSE WHERE id=${id}`)
+    await pool.query(`UPDATE users SET admin=FALSE WHERE id=?`, [id])
     if (debug) console.warn(`${Date.now()} removed from admin role. victim user key: ${id}, author user key: ${user.id}`)
     await Context.editMessageText(`<b>Utente rimosso dalla lista degli amministratori!</b>`, { parse_mode: 'HTML' })
     let markup = {
@@ -774,14 +771,14 @@ client.action("config", async (Context) => {
     const user = Users.find(usr => usr.userID == Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
-    const Config = (await pool.query(`SELECT * FROM config`))[0][0]
-    await Context.editMessageText(`<b>❓ Cosa vuoi fare</b>`, { parse_mode: 'HTML' })
+    const Config = (await pool.query("SELECT * FROM config"))[0][0]
+    await Context.editMessageText(`Nome attuale: <code>${Config.shopname}</code>\nValuta: <code>${Config.currency}</code>\n\n<b>❓ Cosa vuoi fare</b>`, { parse_mode: 'HTML' })
 
     await Context.editMessageReplyMarkup({
         inline_keyboard: [
             [Markup.button.callback("Cambia nome shop", "editshopname")],
             [Markup.button.callback("Cambia valuta", "currency")],
-            [Markup.button.callback("Cambia MOTD", "motd")],
+            [Markup.button.callback("Messaggio del Giorno", "motd")],
             [Markup.button.callback("↩️ Indietro", "panel")]
         ]
     })
@@ -886,12 +883,12 @@ client.action("motd", async (Context) => {
     if (user.banned) return
     if (!user.admin) return
     const Config = (await pool.query(`SELECT * FROM config`))[0][0]
-    await Context.editMessageText(`Il MOTD corrente è: <code>${Config.motd}</code>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`Il Messaggio del Giorno corrente è: <code>${Config.motd}</code>`, { parse_mode: 'HTML' })
 
     await Context.editMessageReplyMarkup({
         inline_keyboard: [
             [Markup.button.callback("Cambia", "editmotd"), Markup.button.callback("Rimuovi", "rmmotd")],
-            [Markup.button.callback("↩️ Indietro", "panel")]
+            [Markup.button.callback("↩️ Indietro", "config")]
         ]
     })
 })
@@ -909,7 +906,7 @@ client.action("rmmotd", async (Context) => {
     const user = Users.find(usr => usr.userID == Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
-    await Context.editMessageText(`<b>Sei sicuro di voler rimuovere il MOTD corrente?</b>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`<b>Sei sicuro di voler rimuovere il Messaggio del Giorno corrente?</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("✅", `motdrm`), Markup.button.callback("❌", "motd")]
