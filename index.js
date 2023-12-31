@@ -301,7 +301,7 @@ client.action("products", async (Context) => {
         } else if (item.stock == -1) {
             stock = "UNLIMITED"
         }
-        message += `<b>‼️ ${item.name}</b>\n💸 Prezzo: <code>${item.price}$</code>\n🎰 Stock: <code>${stock}</code>\n\n`
+        message += `<b>‼️ ${item.name}</b>\n💸 Prezzo: <code>${item.price}${Config.currency}</code>\n🎰 Stock: <code>${stock}</code>\n\n`
     })
     await Context.editMessageText(message, { parse_mode: 'HTML' })
 
