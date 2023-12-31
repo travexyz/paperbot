@@ -779,9 +779,9 @@ client.action("config", async (Context) => {
 
     await Context.editMessageReplyMarkup({
         inline_keyboard: [
-            [Markup.button.callback("Cambia nome shop", "editshopname")]
+            [Markup.button.callback("Cambia nome shop", "editshopname")],
             [Markup.button.callback("Cambia valuta", "currency")],
-            [Markup.button.callback("Cambia MOTD", "editmotd")],
+            [Markup.button.callback("Cambia MOTD", "motd")],
             [Markup.button.callback("↩️ Indietro", "panel")]
         ]
     })
