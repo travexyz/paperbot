@@ -12,10 +12,10 @@ var Config = {
 //#region DB
 const pool = mysql.createPool({
     connectionLimit: 50,
-    host: "localhost",
-    user: "trave",
+    host: process.env.DBHOST,
+    user: process.env.DBUSER,
     password: process.env.DBPWD,
-    database: "paperbot"
+    database: process.env.DBNAME
 })
 //#endregion
 
