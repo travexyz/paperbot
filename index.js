@@ -222,6 +222,21 @@ const rmCredit = new Scenes.WizardScene(
     }
 )
 
+const broadcast = new Scenes.WizardScene(
+    'broadcast',
+    (ctx) => {
+        ctx.reply("Inserisci il messaggio che vuoi mandare a tutti gli utenti del bot:")
+        return ctx.wizard.next()
+    }, async (ctx) => {
+        const Users = (await getUsers())[0]
+        Users.forEach(user => {
+            client.telegram.sendMessage(user.id, ctx.message.text)
+        })
+        if (debug) console.warn(`${Date.now()} broadcasted message "${ctx.message.text}", author user telegram id ${ctx.from.id}`)
+        return ctx.scene.leave()
+    }
+)
+
 client.use(session());
 client.use(new Scenes.Stage([addProduct, editName, editPrice, editStock, addAdmin, editMotd, setCredit, addCredit, rmCredit, editShopName]));
 //#endregion
@@ -362,7 +377,7 @@ client.action("panel", async (Context) => {
             [Markup.button.callback("➕ Aggiungi Admin", "addadmin"),
             Markup.button.callback("❌ Rimuovi Admin", "rmadmin")],
             [Markup.button.callback("👥 Gestisci Utenti", "manageusers")],
-            //[Markup.button.callback("📣 Trasmetti messaggio", "broadcast")],
+            [Markup.button.callback("📣 Trasmetti messaggio", "broadcast")],
             [Markup.button.callback("📝 Configurazione Bot", "config")],
             [Markup.button.callback("↩️ Indietro", "main")]
         ]
@@ -373,7 +388,7 @@ client.action("panel", async (Context) => {
 // #endregion
 
 //#region Panel Actions
-//#region Action: aggiungi prodotto
+//#region Azione: aggiungi prodotto
 client.action("addproduct", async (Context) => {
 
     const Users = (await getUsers())[0]
@@ -564,6 +579,94 @@ client.action(/^show-\d{1,}/, async (Context) => {
 })
 //#endregion
 
+//#region Azione: aggiungi amministratore
+client.action("addadmin", async (Context) => {
+
+    const Users = (await getUsers())[0]
+    const user = Users.find(usr => usr.userID == Context.chat.id)
+    if (user.banned) return
+    if (!user.admin) return
+    await Context.editMessageText(`<b>Sei sicuro di voler aggiungere un nuovo amministratore?</b>`, { parse_mode: 'HTML' })
+    let markup = {
+        inline_keyboard: [
+            [Markup.button.callback("✅", `adminadd`), Markup.button.callback("❌", "panel")]
+        ]
+    }
+    await Context.editMessageReplyMarkup(markup)
+})
+client.action("adminadd", async (Context) => {
+
+    const Users = (await getUsers())[0]
+    const user = Users.find(usr => usr.userID == Context.chat.id)
+    if (user.banned) return
+    if (!user.admin) return
+    await Context.scene.enter("addadmin")
+})
+//#endregion
+//#region Azione: rimuovi amministratore
+client.action("rmadmin", async (Context) => {
+
+    const Users = (await getUsers())[0]
+    const user = Users.find(usr => usr.userID == Context.chat.id)
+    if (user.banned) return
+    if (!user.admin) return
+    await Context.editMessageText(`<b>Seleziona l'amministratore da rimuovere:</b>`, { parse_mode: 'HTML' })
+
+    let keyboard = []
+    Users.forEach(item => {
+        if (item.admin) {
+            keyboard.push([Markup.button.callback(item.userID, `rmadmin-${item.id}`)])
+        }
+    })
+    keyboard.push([Markup.button.callback("↩️ Indietro", "panel")])
+    let markup = {
+        inline_keyboard: keyboard
+    }
+    await Context.editMessageReplyMarkup(markup)
+})
+client.action(/^rmadmin-\d{1,}/, async (Context) => {
+    const Users = (await getUsers())[0]
+    const user = Users.find(usr => usr.userID == Context.chat.id)
+    if (user.banned) return
+    if (!user.admin) return
+    let id = Context.match[0].split("-")[1]
+    const victim_user = (await pool.query(`SELECT * FROM users WHERE id=?`, [id]))[0][0]
+    var username
+    await client.telegram.getChat(victim_user.userID)
+        .then(chat => {
+            if (!chat.username) {
+                username = chat.first_name + " " + ((chat.last_name) ? chat.last_name : "(no username)")
+            } else {
+                username = chat.username
+            }
+        })
+
+    await Context.editMessageText(`<b>Sei sicuro che vuoi rimuovere <code>${username} (${victim_user.userID})</code> dagli amministratori?</b>`, { parse_mode: 'HTML' })
+    let markup = {
+        inline_keyboard: [
+            [Markup.button.callback("✅", `adminrm-${victim_user.id}`), Markup.button.callback("❌", "rmadmin")]
+        ]
+    }
+    await Context.editMessageReplyMarkup(markup)
+})
+client.action(/^adminrm-\d{1,}/, async (Context) => {
+    const Users = (await getUsers())[0]
+    const user = Users.find(usr => usr.userID == Context.chat.id)
+    if (user.banned) return
+    if (!user.admin) return
+    let id = Context.match[0].split("-")[1]
+    await pool.query(`UPDATE users SET admin=FALSE WHERE id=?`, [id])
+    if (debug) console.warn(`${Date.now()} removed from admin role. victim user key: ${id}, author user key: ${user.id}`)
+    await Context.editMessageText(`<b>Utente rimosso dalla lista degli amministratori!</b>`, { parse_mode: 'HTML' })
+    let markup = {
+        inline_keyboard: [
+            [Markup.button.callback("↩️ Indietro", "rmadmin")]
+        ]
+    }
+    await Context.editMessageReplyMarkup(markup)
+})
+//#endregion
+
 //#region Azione: Gestione utenti
 client.action("manageusers", async Context => {
     const Users = (await getUsers())[0]
@@ -689,82 +792,32 @@ client.action(/^userban-\d{1,}/, async (Context) => {
     await Context.editMessageReplyMarkup(markup)
 })
 //#endregion
-
-//#region Azione: aggiungi amministratore
-client.action("addadmin", async (Context) => {
-
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
-    if (user.banned) return
-    if (!user.admin) return
-    await Context.scene.enter("addadmin")
-})
 //#endregion
-//#region Azione: rimuovi amministratore
-client.action("rmadmin", async (Context) => {
 
+//#region Azione: trasmetti messaggio
+client.action("broadcast", async (Context) => {
     const Users = (await getUsers())[0]
     const user = Users.find(usr => usr.userID == Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
-    await Context.editMessageText(`<b>Seleziona l'amministratore da rimuovere:</b>`, { parse_mode: 'HTML' })
-
-    let keyboard = []
-    Users.forEach(item => {
-        if (item.admin) {
-            keyboard.push([Markup.button.callback(item.userID, `rmadmin-${item.id}`)])
-        }
-    })
-    keyboard.push([Markup.button.callback("↩️ Indietro", "panel")])
-    let markup = {
-        inline_keyboard: keyboard
-    }
-    await Context.editMessageReplyMarkup(markup)
-})
-client.action(/^rmadmin-\d{1,}/, async (Context) => {
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
-    if (user.banned) return
-    if (!user.admin) return
-    let id = Context.match[0].split("-")[1]
-    const victim_user = (await pool.query(`SELECT * FROM users WHERE id=?`, [id]))[0][0]
-    var username
-    await client.telegram.getChat(victim_user.userID)
-        .then(chat => {
-            if (!chat.username) {
-                username = chat.first_name + " " + ((chat.last_name) ? chat.last_name : "(no username)")
-            } else {
-                username = chat.username
-            }
-        })
-
-    await Context.editMessageText(`<b>Sei sicuro che vuoi rimuovere <code>${username} (${victim_user.userID})</code> dagli amministratori?</b>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`<b>Sei sicuro di voler mandare un messaggio a tutti gli utenti/admin del bot?</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
-            [Markup.button.callback("✅", `adminrm-${victim_user.id}`), Markup.button.callback("❌", "rmadmin")]
+            [Markup.button.callback("✅", `dobroadcast`), Markup.button.callback("❌", "panel")]
         ]
     }
     await Context.editMessageReplyMarkup(markup)
 })
-client.action(/^adminrm-\d{1,}/, async (Context) => {
+client.action("dobroadcast", async (Context) => {
     const Users = (await getUsers())[0]
     const user = Users.find(usr => usr.userID == Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
-    let id = Context.match[0].split("-")[1]
-    await pool.query(`UPDATE users SET admin=FALSE WHERE id=?`, [id])
-    if (debug) console.warn(`${Date.now()} removed from admin role. victim user key: ${id}, author user key: ${user.id}`)
-    await Context.editMessageText(`<b>Utente rimosso dalla lista degli amministratori!</b>`, { parse_mode: 'HTML' })
-    let markup = {
-        inline_keyboard: [
-            [Markup.button.callback("↩️ Indietro", "rmadmin")]
-        ]
-    }
-    await Context.editMessageReplyMarkup(markup)
+    await Context.scene.enter("broadcast")
 })
 //#endregion
 
-//#region Config
+//#region Azione: Config
 client.action("config", async (Context) => {
 
     const Users = (await getUsers())[0]
@@ -783,7 +836,6 @@ client.action("config", async (Context) => {
         ]
     })
 })
-//#endregion
 //#region Config: nome shop
 client.action("editshopname", async (Context) => {
     const Users = (await getUsers())[0]
@@ -861,7 +913,7 @@ client.action("yen", async (Context) => {
 })
 client.action("pound", async (Context) => {
     const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
+
     if (user.banned) return
     if (!user.admin) return
     await pool.query(`UPDATE config SET currency='£'`)
@@ -875,7 +927,7 @@ client.action("pound", async (Context) => {
     await Context.editMessageReplyMarkup(markup)
 })
 //#endregion
-//#region MOTD
+//#region Config: MOTD
 client.action("motd", async (Context) => {
 
     const Users = (await getUsers())[0]
