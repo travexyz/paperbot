@@ -136,7 +136,7 @@ const editMotd = new Scenes.WizardScene(
         return ctx.wizard.next()
     }, async (ctx) => {
         await pool.query(`UPDATE config SET motd=?`, [`${ctx.message.text}`])
-        if (debug) console.warn(`${Date.now()} motd edited. author user telegram id ${ctx.from.id}`)
+        if (debug) console.warn(`${Date.now()} motd edited in "${ctx.message.text}". author user telegram id ${ctx.from.id}`)
         ctx.reply(`Nuovo Messaggio del Giorno impostato!`)
         return ctx.scene.leave()
     },
@@ -149,7 +149,7 @@ const editShopName = new Scenes.WizardScene(
         return ctx.wizard.next()
     }, async (ctx) => {
         await pool.query(`UPDATE config SET shopname=?`, [`${ctx.message.text}`])
-        if (debug) console.warn(`${Date.now()} shopname edited. author user telegram id ${ctx.from.id}`)
+        if (debug) console.warn(`${Date.now()} shopname edited in "${ctx.message.text}". author user telegram id ${ctx.from.id}`)
         ctx.reply(`Nuovo nome shop impostato!`)
         return ctx.scene.leave()
     },
@@ -230,15 +230,16 @@ const broadcast = new Scenes.WizardScene(
     }, async (ctx) => {
         const Users = (await getUsers())[0]
         Users.forEach(user => {
-            client.telegram.sendMessage(user.id, ctx.message.text)
+            client.telegram.sendMessage(user.userID, ctx.message.text)
         })
         if (debug) console.warn(`${Date.now()} broadcasted message "${ctx.message.text}", author user telegram id ${ctx.from.id}`)
+        ctx.reply("Messaggio mandato! Dovresti vederlo anche te qua sopra.")
         return ctx.scene.leave()
     }
 )
 
 client.use(session());
-client.use(new Scenes.Stage([addProduct, editName, editPrice, editStock, addAdmin, editMotd, setCredit, addCredit, rmCredit, editShopName]));
+client.use(new Scenes.Stage([addProduct, editName, editPrice, editStock, addAdmin, editMotd, setCredit, addCredit, rmCredit, editShopName, broadcast]));
 //#endregion
 
 // #region Start Command
@@ -800,7 +801,7 @@ client.action("broadcast", async (Context) => {
     const user = Users.find(usr => usr.userID == Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
-    await Context.editMessageText(`<b>Sei sicuro di voler mandare un messaggio a tutti gli utenti/admin del bot?</b>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`<b>Sei sicuro di voler mandare un messaggio a tutti gli utenti e admin del bot?</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("✅", `dobroadcast`), Markup.button.callback("❌", "panel")]
