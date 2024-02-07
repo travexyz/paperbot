@@ -16,7 +16,7 @@ const pool = mysql.createPool({
 
 // #region Bot Configuration
 const {
-    Telegraf, Markup, Scenes, session, Context, deunionize
+    Telegraf, Markup, Scenes, session
 } = require('telegraf')
 
 const client = new Telegraf(process.env.TOKEN)
@@ -247,7 +247,7 @@ client.start(async (Context) => {
     const Users = (await getUsers())[0]
     const user = Users.find(usr => usr.userID == Context.chat.id)
     if (!user) {
-        await pool.query(`INSERT INTO users (userID, balance, admin, banned) VALUES (?, 0.00, 0, 0)`, [Context.chat.id])
+        await pool.query(`INSERT INTO users (userID, balance, admin, banned, pisello) VALUES (?, 0.00, 0, 0, ${Math.floor(Math.random() * 20)})`, [Context.chat.id])
         if (debug) console.warn(`${Date.now()} new user added to db. user telegram id: ${Context.chat.id}`)
     } else {
         if (user.banned) return
@@ -334,11 +334,10 @@ client.action("account", async (Context) => {
     if (user.banned) return
 
     const Config = (await pool.query(`SELECT * FROM config`))[0][0]
-    let pisello = Math.floor(Math.random() * 20)
     await Context.editMessageText(`👤 <b>Username</b> <code>${Context.chat.username}</code>${(user.admin) ? " <i>amministratore</i>" : ""}
 🆔 <b>ID:</b> <code>${Context.chat.id}</code>
 💵 <b>Grana:</b> <code>${user.balance}${Config.currency}</code>
-📏 <b>Pisello (variabile):</b> <code>${pisello}cm ${(pisello > 10) ? "😱" : "😮‍💨"}</code>`, { parse_mode: 'HTML' })
+📏 <b>Pisello:</b> <code>${user.pisello}cm ${(user.pisello > 10) ? "😱" : "😮‍💨"}</code>`, { parse_mode: 'HTML' })
 
     await Context.editMessageReplyMarkup({
         inline_keyboard: [
