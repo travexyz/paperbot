@@ -1,10 +1,10 @@
-// File: scenes.js
+// File: include/scenes.js
 // Descrizione: File contenente tutte le scene del bot
 // Autore: travexyz
 
-const {
-    Telegraf, Markup, Scenes, session
-} = require('telegraf')
+const { Scenes } = require('telegraf')
+const pool = require('./db.js');
+const debug = true // DA AGGIORNARE
 
 const addProduct = new Scenes.WizardScene(
     'addproduct',

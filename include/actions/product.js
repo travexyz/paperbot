@@ -1,9 +1,11 @@
-// File: product.js
+// File: include/actions/product.js
 // Descrizione: File contenente le azioni del pannello prodotti del bot
 // Autore: travexyz
 // Data: 14/04/2024
 
-const Markup = require('telegraf')
+const { Markup } = require('telegraf')
+const pool = require('../db.js');
+const debug = true // DA AGGIORNARE
 
 const addproduct = async (Context) => {
 

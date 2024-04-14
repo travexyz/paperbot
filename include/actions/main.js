@@ -1,9 +1,26 @@
-// File: include/main.js
+// File: include/actions/main.js
 // Descrizione: File contenente le azioni del pannello principale del bot
 // Autore: travexyz
 // Data: 14/04/2024
 
-const Markup = require('telegraf')
+const { Markup } = require('telegraf')
+const pool = require('../db.js');
+
+const start = async (Context) => {
+    const Users = (await getUsers())[0]
+    const user = Users.find(usr => usr.userID == Context.chat.id)
+    if (!user) {
+        await pool.query(`INSERT INTO users (userID, balance, admin, banned, pisello) VALUES (?, 0.00, 0, 0, ${Math.floor(Math.random() * 20)})`, [Context.chat.id])
+        if (debug) console.warn(`${Date.now()} new user added to db. user telegram id: ${Context.chat.id}`)
+    } else {
+        if (user.banned) return
+    }
+    const Config = (await pool.query(`SELECT * FROM config`))[0][0]
+    Context.reply(`*${Config.shopname} Bot — Creato da ||travexyz||*`, {
+        parse_mode: "MarkdownV2",
+        ...Markup.inlineKeyboard([[Markup.button.callback("👽 Entra", "main")]])
+    })
+}
 
 const main = async (Context) => {
 
@@ -128,4 +145,4 @@ const panel = async (Context) => {
     await Context.editMessageReplyMarkup(markup)
 }
 
-module.exports = { main, products, account, info, panel }
+module.exports = { start, main, products, account, info, panel }
