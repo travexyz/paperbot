@@ -5,6 +5,7 @@
 
 const { Markup } = require('telegraf')
 const pool = require('../db.js');
+
 const debug = true // DA AGGIORNARE
 
 const addproduct = async (Context) => {

@@ -3,7 +3,9 @@
 // Autore: travexyz
 
 const { Scenes } = require('telegraf')
+const client = require('../include/client.js');
 const pool = require('./db.js');
+
 const debug = true // DA AGGIORNARE
 
 const addProduct = new Scenes.WizardScene(
@@ -84,7 +86,7 @@ const addAdmin = new Scenes.WizardScene(
         id = ctx.message.text
         client.telegram.getChat(id)
             .then(chat => { ctx.reply(`Sei sicuro di voler aggiungere ${chat.username} (${id}) alla lista di amministratori? (0 no, 1 si)`) })
-            .catch(err => { ctx.reply(`Impossibile trovare l'utente, verifica che l'ID (non l'username) sia corretto! Esco.`, { parse_mode: 'HTML' }); ctx.scene.leave() })
+            .catch(err => { ctx.reply(`Impossibile trovare l'utente, verifica che l'ID (non l'username) sia corretto. Riprova.`, { parse_mode: 'HTML' }); ctx.scene.leave() })
         return ctx.wizard.next()
     }, async (ctx) => {
         if (ctx.message.text == "1") {
@@ -133,7 +135,7 @@ const setCredit = new Scenes.WizardScene(
         await client.telegram.getChat(user.userID)
             .then(chat => username = chat.username)
 
-        ctx.reply(`Inserisci il valore di grana da impostare all'utente ${username} (${user.userID}):`)
+        ctx.reply(`Inserisci il credito da impostare all'utente ${username} (${user.userID}):`)
         return ctx.wizard.next()
     },
     async (ctx) => {
@@ -154,7 +156,7 @@ const addCredit = new Scenes.WizardScene(
         await client.telegram.getChat(user.userID)
             .then(chat => username = chat.username)
 
-        ctx.reply(`Inserisci il valore di grana da aggiungere all'utente ${username} (${user.userID}):`)
+        ctx.reply(`Inserisci il credito da aggiungere all'utente ${username} (${user.userID}):`)
         return ctx.wizard.next()
     },
     async (ctx) => {
@@ -177,7 +179,7 @@ const rmCredit = new Scenes.WizardScene(
         await client.telegram.getChat(user.userID)
             .then(chat => username = chat.username)
 
-        ctx.reply(`Inserisci il valore di grana da rimuovere all'utente ${username} (${user.userID}):`)
+        ctx.reply(`Inserisci il credito da rimuovere all'utente ${username} (${user.userID}):`)
         return ctx.wizard.next()
     },
     async (ctx) => {

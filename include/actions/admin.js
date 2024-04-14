@@ -3,7 +3,9 @@
 // Date: 14/04/2024
 
 const { Markup } = require('telegraf');
+const client = require("../client.js");
 const pool = require("../db.js");
+
 const debug = true // DA AGGIORNARE
 
 const addadmin = async (Context) => {

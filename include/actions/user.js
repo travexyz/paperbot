@@ -3,7 +3,10 @@
 // Data: 14/04/2024
 
 const { Markup } = require('telegraf');
+const client = require("../client.js");
 const pool = require("../db.js");
+
+const debug = true // DA AGGIORNARE
 
 const manageusers = async Context => {
     const Users = (await getUsers())[0]

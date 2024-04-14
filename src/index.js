@@ -12,17 +12,13 @@ const scenes = require("../include/scenes.js");
 const main_actions = require("../include/actions/main.js");
 const product_actions = require("../include/actions/product.js");
 const admin_actions = require("../include/actions/admin.js");
+const user_actions = require("../include/actions/user.js");
 
 // Configuring database
 const pool = require('../include/db.js');
 
 // Configuring bot client and error handling
-const client = new Telegraf(process.env.TOKEN)
-client.catch(async (e) => {
-    console.error(e)
-    results = await pool.query("SELECT * FROM users WHERE admin=TRUE")
-    results.forEach(admin => { client.telegram.sendMessage(admin[0].userID, `Errore: \`\`\`${e}\`\`\``, { parse_mode: "MarkdownV2" }) })
-})
+const client = require('../include/client.js');
 
 // Creating async functions for db queries
 getProducts = async () => {
