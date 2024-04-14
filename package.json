@@ -2,7 +2,7 @@
   "name": "paper_bot",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "./src/index.js",
   "dependencies": {
     "abort-controller": "^3.0.0",
     "buffer-alloc": "^1.2.0",
@@ -14,6 +14,7 @@
     "event-target-shim": "^5.0.1",
     "generate-function": "^2.3.1",
     "iconv-lite": "^0.6.3",
+    "inspector": "^0.5.0",
     "is-property": "^1.0.2",
     "long": "^5.2.3",
     "lru-cache": "^10.1.0",
@@ -33,9 +34,8 @@
     "webidl-conversions": "^3.0.1",
     "whatwg-url": "^5.0.0"
   },
-  "devDependencies": {},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node ./src/index.js"
   },
   "repository": {
     "type": "git",
