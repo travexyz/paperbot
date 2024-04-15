@@ -11,11 +11,15 @@ const debug = true // DA AGGIORNARE
 const addProduct = new Scenes.WizardScene(
     'addproduct',
     (ctx) => {
-        ctx.reply("Inserisci il nome del prodotto:")
+        ctx.reply("Inserisci il nome del prodotto (\"cancel\" per annullare):")
         productInfo = {}
         return ctx.wizard.next()
     },
     (ctx) => {
+        if (ctx.message.text == "cancel") {
+            ctx.reply("Operazione annullata.")
+            return ctx.scene.leave()
+        }
         productInfo.name = ctx.message.text
         ctx.reply(`Inserisci il prezzo per il prodotto ${productInfo.name}:`)
         return ctx.wizard.next()
@@ -40,9 +44,13 @@ const addProduct = new Scenes.WizardScene(
 const editName = new Scenes.WizardScene(
     'editname',
     (ctx) => {
-        ctx.reply("Inserisci il nuovo nome del prodotto:")// 
+        ctx.reply("Inserisci il nuovo nome del prodotto (\"cancel\" per annullare):")
         return ctx.wizard.next()
     }, async (ctx) => {
+        if (ctx.message.text == "cancel") {
+            ctx.reply("Operazione annullata.")
+            return ctx.scene.leave()
+        }
         await pool.query(`UPDATE products SET name=? WHERE id=?`, [`${ctx.message.text}`, `${ctx.session.__scenes.state.productId}`])
         if (debug) console.warn(`${Date.now()} product name changed (${ctx.message.text}). victim product key: ${ctx.session.__scenes.state.productId}`)
         ctx.reply(`Modificato nome del prodotto in ${ctx.message.text}`)
@@ -53,9 +61,13 @@ const editName = new Scenes.WizardScene(
 const editPrice = new Scenes.WizardScene(
     'editprice',
     (ctx) => {
-        ctx.reply("Inserisci il nuovo prezzo del prodotto:")
+        ctx.reply("Inserisci il nuovo prezzo del prodotto (\"cancel\" per annullare):")
         return ctx.wizard.next()
     }, async (ctx) => {
+        if (ctx.message.text == "cancel") {
+            ctx.reply("Operazione annullata.")
+            return ctx.scene.leave()
+        }
         await pool.query(`UPDATE products SET price=? WHERE id=?`, [`${ctx.message.text}`, `${ctx.session.__scenes.state.productId}`])
         if (debug) console.warn(`${Date.now()} product price changed (${ctx.message.text}). victim product key: ${ctx.session.__scenes.state.productId}`)
         ctx.reply(`Modificato prezzo del prodotto in ${ctx.message.text}`)
@@ -66,9 +78,13 @@ const editPrice = new Scenes.WizardScene(
 const editStock = new Scenes.WizardScene(
     'editstock',
     (ctx) => {
-        ctx.reply("Inserisci la nuova quantità del prodotto (-1 infinito, 0 terminato):")
+        ctx.reply("Inserisci la nuova quantità del prodotto (-1 infinito, 0 terminato, \"cancel\" per annullare):")
         return ctx.wizard.next()
     }, async (ctx) => {
+        if (ctx.message.text == "cancel") {
+            ctx.reply("Operazione annullata.")
+            return ctx.scene.leave()
+        }
         await pool.query(`UPDATE products SET stock=? WHERE id=?`, [`${ctx.message.text}`, `${ctx.session.__scenes.state.productId}`])
         if (debug) console.warn(`${Date.now()} product stock changed (${ctx.message.text}). victim product key: ${ctx.session.__scenes.state.productId}`)
         ctx.reply(`Modificata quantità del prodotto in ${ctx.message.text}`)
@@ -79,10 +95,13 @@ const editStock = new Scenes.WizardScene(
 const addAdmin = new Scenes.WizardScene(
     'addadmin',
     (ctx) => {
-        ctx.reply("Inserisci l'ID dell'amministratore da aggiungere:")
+        ctx.reply("Inserisci l'ID dell'amministratore da aggiungere (\"cancel\" per annullare):")
         return ctx.wizard.next()
-    },
-    (ctx) => {
+    }, (ctx) => {
+        if (ctx.message.text == "cancel") {
+            ctx.reply("Operazione annullata.")
+            return ctx.scene.leave()
+        }
         id = ctx.message.text
         client.telegram.getChat(id)
             .then(chat => { ctx.reply(`Sei sicuro di voler aggiungere ${chat.username} (${id}) alla lista di amministratori? (0 no, 1 si)`) })
@@ -103,9 +122,13 @@ const addAdmin = new Scenes.WizardScene(
 const editMotd = new Scenes.WizardScene(
     'editmotd',
     (ctx) => {
-        ctx.reply("Inserisci il nuovo Messaggio del Giorno da visualizzare:")
+        ctx.reply("Inserisci il nuovo Messaggio del Giorno da visualizzare (\"cancel\" per annullare):")
         return ctx.wizard.next()
     }, async (ctx) => {
+        if (ctx.message.text == "cancel") {
+            ctx.reply("Operazione annullata.")
+            return ctx.scene.leave()
+        }
         await pool.query(`UPDATE config SET motd=?`, [`${ctx.message.text}`])
         if (debug) console.warn(`${Date.now()} motd edited in "${ctx.message.text}". author user telegram id ${ctx.from.id}`)
         ctx.reply(`Nuovo Messaggio del Giorno impostato!`)
@@ -116,9 +139,13 @@ const editMotd = new Scenes.WizardScene(
 const editShopName = new Scenes.WizardScene(
     'editshopname',
     (ctx) => {
-        ctx.reply("Inserisci il nuovo nome dello shop da visualizzare:")
+        ctx.reply("Inserisci il nuovo nome dello shop da visualizzare (\"cancel\" per annullare):")
         return ctx.wizard.next()
     }, async (ctx) => {
+        if (ctx.message.text == "cancel") {
+            ctx.reply("Operazione annullata.")
+            return ctx.scene.leave()
+        }
         await pool.query(`UPDATE config SET shopname=?`, [`${ctx.message.text}`])
         if (debug) console.warn(`${Date.now()} shopname edited in "${ctx.message.text}". author user telegram id ${ctx.from.id}`)
         ctx.reply(`Nuovo nome shop impostato!`)
@@ -135,10 +162,13 @@ const setCredit = new Scenes.WizardScene(
         await client.telegram.getChat(user.userID)
             .then(chat => username = chat.username)
 
-        ctx.reply(`Inserisci il credito da impostare all'utente ${username} (${user.userID}):`)
+        ctx.reply(`Inserisci il credito da impostare all'utente ${username} (${user.userID}) ("cancel" per annullare):`)
         return ctx.wizard.next()
-    },
-    async (ctx) => {
+    }, async (ctx) => {
+        if (ctx.message.text == "cancel") {
+            ctx.reply("Operazione annullata.")
+            return ctx.scene.leave()
+        }
         var credit = ctx.message.text
         await pool.query(`UPDATE users SET balance=? WHERE id=?`, [parseFloat(credit), ctx.session.__scenes.state.id])
         if (debug) console.warn(`${Date.now()} user credit changed to ${parseFloat(credit)}. victim user key: ${ctx.session.__scenes.state.id}, author user telegram id: ${ctx.from.id}`)
@@ -156,10 +186,13 @@ const addCredit = new Scenes.WizardScene(
         await client.telegram.getChat(user.userID)
             .then(chat => username = chat.username)
 
-        ctx.reply(`Inserisci il credito da aggiungere all'utente ${username} (${user.userID}):`)
+        ctx.reply(`Inserisci il credito da aggiungere all'utente ${username} (${user.userID}) ("cancel" per annullare):`)
         return ctx.wizard.next()
-    },
-    async (ctx) => {
+    }, async (ctx) => {
+        if (ctx.message.text == "cancel") {
+            ctx.reply("Operazione annullata.")
+            return ctx.scene.leave()
+        }
         const Users = (await getUsers())[0]
         var user = Users.find(usr => usr.id == ctx.session.__scenes.state.id)
         var credit = user.balance + (parseFloat(ctx.message.text))
@@ -179,10 +212,13 @@ const rmCredit = new Scenes.WizardScene(
         await client.telegram.getChat(user.userID)
             .then(chat => username = chat.username)
 
-        ctx.reply(`Inserisci il credito da rimuovere all'utente ${username} (${user.userID}):`)
+        ctx.reply(`Inserisci il credito da rimuovere all'utente ${username} (${user.userID}) ("cancel" per annullare):`)
         return ctx.wizard.next()
-    },
-    async (ctx) => {
+    }, async (ctx) => {
+        if (ctx.message.text == "cancel") {
+            ctx.reply("Operazione annullata.")
+            return ctx.scene.leave()
+        }
         const Users = (await getUsers())[0]
         var user = Users.find(usr => usr.id == ctx.session.__scenes.state.id)
         var credit = user.balance - (parseFloat(ctx.message.text))
@@ -196,9 +232,13 @@ const rmCredit = new Scenes.WizardScene(
 const broadcast = new Scenes.WizardScene(
     'broadcast',
     (ctx) => {
-        ctx.reply("Inserisci il messaggio che vuoi mandare a tutti gli utenti del bot:")
+        ctx.reply("Inserisci il messaggio che vuoi mandare a tutti gli utenti del bot (\"cancel\" per annullare):")
         return ctx.wizard.next()
     }, async (ctx) => {
+        if (ctx.message.text == "cancel") {
+            ctx.reply("Operazione annullata.")
+            return ctx.scene.leave()
+        }
         const Users = (await getUsers())[0]
         Users.forEach(user => {
             client.telegram.sendMessage(user.userID, ctx.message.text)
