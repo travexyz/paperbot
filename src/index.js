@@ -13,12 +13,15 @@ const main_actions = require("../include/actions/main.js");
 const product_actions = require("../include/actions/product.js");
 const admin_actions = require("../include/actions/admin.js");
 const user_actions = require("../include/actions/user.js");
+const config_actions = require("../include/actions/config.js");
+const motd_actions = require("../include/actions/motd.js");
 
 // Configuring database
 const pool = require('../include/db.js');
 
 // Configuring bot client and error handling
 const client = require('../include/client.js');
+const { config } = require('dotenv');
 
 // Creating async functions for db queries
 getProducts = async () => {
@@ -79,202 +82,31 @@ client.action(/^banuser-\d{1,}/, user_actions.banuser)
 client.action(/^userban-\d{1,}/, user_actions.userban)
 
 
-//#region Azione: trasmetti messaggio
-client.action("broadcast", async (Context) => {
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
-    if (user.banned) return
-    if (!user.admin) return
-    await Context.editMessageText(`<b>Sei sicuro di voler mandare un messaggio a tutti gli utenti e admin del bot?</b>`, { parse_mode: 'HTML' })
-    let markup = {
-        inline_keyboard: [
-            [Markup.button.callback("✅", `dobroadcast`), Markup.button.callback("❌", "panel")]
-        ]
-    }
-    await Context.editMessageReplyMarkup(markup)
-})
-client.action("dobroadcast", async (Context) => {
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
-    if (user.banned) return
-    if (!user.admin) return
-    await Context.scene.enter("broadcast")
-})
-//#endregion
+// Azione: trasmetti messaggio
+client.action("broadcast", config_actions.broadcast)
+client.action("dobroadcast", config_actions.dobroadcast)
 
-//#region Azione: Config
-client.action("config", async (Context) => {
-
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
-    if (user.banned) return
-    if (!user.admin) return
-    const Config = (await pool.query("SELECT * FROM config"))[0][0]
-    await Context.editMessageText(`Nome attuale: <code>${Config.shopname}</code>\nValuta: <code>${Config.currency}</code>\n\n<b>❓ Cosa vuoi fare</b>`, { parse_mode: 'HTML' })
-
-    await Context.editMessageReplyMarkup({
-        inline_keyboard: [
-            [Markup.button.callback("Cambia nome shop", "editshopname")],
-            [Markup.button.callback("Cambia valuta", "currency")],
-            [Markup.button.callback("Messaggio del Giorno", "motd")],
-            [Markup.button.callback("↩️ Indietro", "panel")]
-        ]
-    })
-})
-//#region Config: nome shop
-client.action("editshopname", async (Context) => {
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
-    if (user.banned) return
-    if (!user.admin) return
-    await Context.scene.enter("editshopname")
-})
-//#endregion
-//#region Config: valuta
-client.action("currency", async (Context) => {
-
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
-    if (user.banned) return
-    if (!user.admin) return
-    const Config = (await pool.query(`SELECT * FROM config`))[0][0]
-    await Context.editMessageText(`La valuta corrente è: <code>${Config.currency}</code>\nChe valuta vuoi usare?`, { parse_mode: 'HTML' })
-
-    await Context.editMessageReplyMarkup({
-        inline_keyboard: [
-            /*
-            [Markup.button.callback("EUR", "eur"), Markup.button.callback("USD", "usd"), Markup.button.callback("JPY", "jpy"), Markup.button.callback("GBP", "gbp")],
-            [Markup.button.callback("AUD", "aud"), Markup.button.callback("CAD", "cad"), Markup.button.callback("CHF", "chf"), Markup.button.callback("CNH", "cnh") ],
-            */
-            [Markup.button.callback("€", "euro"), Markup.button.callback("$", "dollar"), Markup.button.callback("¥", "yen"), Markup.button.callback("£", "pound")],
-            [Markup.button.callback("↩️ Indietro", "panel")]
-        ]
-    })
-})
-client.action("euro", async (Context) => {
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
-    if (user.banned) return
-    if (!user.admin) return
-    await pool.query(`UPDATE config SET currency='€'`)
-    if (debug) console.warn(`${Date.now()} currency changed to euro. author user key ${user.id}`)
-    await Context.editMessageText(`<b>Valuta impostata ad euro €!</b>`, { parse_mode: 'HTML' })
-    let markup = {
-        inline_keyboard: [
-            [Markup.button.callback("↩️ Indietro", "currency")]
-        ]
-    }
-    await Context.editMessageReplyMarkup(markup)
-})
-client.action("dollar", async (Context) => {
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
-    if (user.banned) return
-    if (!user.admin) return
-    await pool.query(`UPDATE config SET currency='$'`)
-    if (debug) console.warn(`${Date.now()} currency changed to dollar. author user key ${user.id}`)
-    await Context.editMessageText(`<b>Valuta impostata a dollari $!</b>`, { parse_mode: 'HTML' })
-    let markup = {
-        inline_keyboard: [
-            [Markup.button.callback("↩️ Indietro", "currency")]
-        ]
-    }
-    await Context.editMessageReplyMarkup(markup)
-})
-client.action("yen", async (Context) => {
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
-    if (user.banned) return
-    if (!user.admin) return
-    await pool.query(`UPDATE config SET currency='¥'`)
-    if (debug) console.warn(`${Date.now()} currency changed to yen. author user key ${user.id}`)
-    await Context.editMessageText(`<b>Valuta impostata a yen ¥!</b>`, { parse_mode: 'HTML' })
-    let markup = {
-        inline_keyboard: [
-            [Markup.button.callback("↩️ Indietro", "currency")]
-        ]
-    }
-    await Context.editMessageReplyMarkup(markup)
-})
-client.action("pound", async (Context) => {
-    const Users = (await getUsers())[0]
-
-    if (user.banned) return
-    if (!user.admin) return
-    await pool.query(`UPDATE config SET currency='£'`)
-    if (debug) console.warn(`${Date.now()} currency changed to pound. author user key ${user.id}`)
-    await Context.editMessageText(`<b>Valuta impostata a sterline £!</b>`, { parse_mode: 'HTML' })
-    let markup = {
-        inline_keyboard: [
-            [Markup.button.callback("↩️ Indietro", "currency")]
-        ]
-    }
-    await Context.editMessageReplyMarkup(markup)
-})
-//#endregion
-//#region Config: MOTD
-client.action("motd", async (Context) => {
-
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
-    if (user.banned) return
-    if (!user.admin) return
-    const Config = (await pool.query(`SELECT * FROM config`))[0][0]
-    await Context.editMessageText(`Il Messaggio del Giorno corrente è: <code>${Config.motd}</code>`, { parse_mode: 'HTML' })
-
-    await Context.editMessageReplyMarkup({
-        inline_keyboard: [
-            [Markup.button.callback("Cambia", "editmotd"), Markup.button.callback("Rimuovi", "rmmotd")],
-            [Markup.button.callback("↩️ Indietro", "config")]
-        ]
-    })
-})
-client.action("editmotd", async (Context) => {
-
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
-    if (user.banned) return
-    if (!user.admin) return
-    await Context.scene.enter("editmotd")
-})
-client.action("rmmotd", async (Context) => {
-
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
-    if (user.banned) return
-    if (!user.admin) return
-    await Context.editMessageText(`<b>Sei sicuro di voler rimuovere il Messaggio del Giorno corrente?</b>`, { parse_mode: 'HTML' })
-    let markup = {
-        inline_keyboard: [
-            [Markup.button.callback("✅", `motdrm`), Markup.button.callback("❌", "motd")]
-        ]
-    }
-    await Context.editMessageReplyMarkup(markup)
-})
-client.action("motdrm", async (Context) => {
-
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
-    if (user.banned) return
-    if (!user.admin) return
-    await pool.query(`UPDATE config SET motd=NULL`)
-    if (debug) console.warn(`${Date.now()} motd removed. author user key ${user.id}`)
-    await Context.editMessageText(`<b>MOTD rimosso!</b>`, { parse_mode: 'HTML' })
-    let markup = {
-        inline_keyboard: [
-            [Markup.button.callback("↩️ Indietro", "motd")]
-        ]
-    }
-    await Context.editMessageReplyMarkup(markup)
-})
-//#endregion
-//#endregion
+// Azione: Config
+client.action("config", config_actions.config)
+// Config: nome shop
+client.action("editshopname", config_actions.editshopname)
+// Config: valuta
+client.action("currency", config_actions.currency)
+client.action("euro", config_actions.euro)
+client.action("dollar", config_actions.dollar)
+client.action("yen", config_actions.yen)
+client.action("pound", config_actions.pound)
+// Config: MOTD
+client.action("motd", motd_actions.motd)
+client.action("editmotd", motd_actions.editmotd)
+client.action("rmmotd", motd_actions.rmmotd)
+client.action("motdrm", motd_actions.motdrm)
 //#endregion
 
 // #region Launching
 client.launch({
     dropPendingUpdates: true
 })
-process.once("SIGINT", () => client.stop("SIGINT"))
-process.once("SIGTERM", () => client.stop("SIGTERM"))
+// process.once("SIGINT", () => client.stop("SIGINT"))
+// process.once("SIGTERM", () => client.stop("SIGTERM"))
 // #endregion

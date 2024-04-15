@@ -109,6 +109,7 @@ const editproductconfirm = async (Context) => {
         inline_keyboard: [
             [Markup.button.callback("Nome", `changename-${product.id}`), Markup.button.callback("Prezzo", `changeprice-${product.id}`), Markup.button.callback("Stock", `changestock-${product.id}`)],
             [Markup.button.callback("Visibilita", `changevis-${product.id}`)],
+            [Markup.button.callback("Rimuovi", `rmproduct-${product.id}`)],
             [Markup.button.callback("↩️ Indietro", "editproduct")]
         ]
     }
