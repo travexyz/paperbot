@@ -1,8 +1,5 @@
-//#region Initial configuration
-const debug = true //(require('inspector').url()) ? true : false;
-
 const {
-    Telegraf, Markup, Scenes, session
+    Scenes, session
 } = require('telegraf')
 
 require('dotenv').config();
@@ -16,25 +13,35 @@ const user_actions = require("../include/actions/user.js");
 const config_actions = require("../include/actions/config.js");
 const motd_actions = require("../include/actions/motd.js");
 
-// Configuring database
+// Configuring database pool
 const pool = require('../include/db.js');
 
 // Configuring bot client and error handling
 const client = require('../include/client.js');
-const { config } = require('dotenv');
 
 // Creating async functions for db queries
 getProducts = async () => {
-    return pool.query('SELECT * FROM products')
+    var results, q = "SELECT * FROM products"
+
+    try { results = await pool.query(q); }
+    catch (e) { console.error(`Database query error: ${e}`); }
+    //finally { console.info(`Executed database query: ${q}`); }
+    
+    return results;
 }
 getUsers = async () => {
-    return pool.query('SELECT * FROM users')
+    var results, q = "SELECT * FROM users";
+
+    try { results = await pool.query(q); }
+    catch (e) { console.error(`Database query error: ${e}`); }
+    //finally { console.info(`Executed database query: ${q}`); }
+    
+    return results;
 }
 
 // Confiugring wizards (scenes)
 client.use(session());
 client.use(new Scenes.Stage([scenes.addProduct, scenes.editName, scenes.editPrice, scenes.editStock, scenes.addAdmin, scenes.editMotd, scenes.setCredit, scenes.addCredit, scenes.rmCredit, scenes.editShopName, scenes.broadcast]));
-//#endregion
 
 // #region Registering action callbacks
 // Azione comando start
@@ -69,7 +76,7 @@ client.action("addadmin", admin_actions.addadmin)
 client.action("adminadd", admin_actions.adminadd)
 client.action("rmadmin", admin_actions.rmadmin)
 client.action(/^rmadmin-\d{1,}/, admin_actions.rmadminconfirm)
-client.action(/^adminrm-\d{1,}/, admin_actions.adminrm) 
+client.action(/^adminrm-\d{1,}/, admin_actions.adminrm)
 
 // Azioni gestione utenti
 client.action("manageusers", user_actions.manageusers)
@@ -82,11 +89,11 @@ client.action(/^banuser-\d{1,}/, user_actions.banuser)
 client.action(/^userban-\d{1,}/, user_actions.userban)
 
 
-// Azione: trasmetti messaggio
+// Trasmetti messaggio
 client.action("broadcast", config_actions.broadcast)
 client.action("dobroadcast", config_actions.dobroadcast)
 
-// Azione: Config
+// Pannello config
 client.action("config", config_actions.config)
 // Config: nome shop
 client.action("editshopname", config_actions.editshopname)
@@ -103,10 +110,6 @@ client.action("rmmotd", motd_actions.rmmotd)
 client.action("motdrm", motd_actions.motdrm)
 //#endregion
 
-// #region Launching
 client.launch({
     dropPendingUpdates: true
 })
-// process.once("SIGINT", () => client.stop("SIGINT"))
-// process.once("SIGTERM", () => client.stop("SIGTERM"))
-// #endregion
