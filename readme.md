@@ -15,8 +15,8 @@
 > DBPWD=<password per il db>
 > DBNAME=<nome del db>
 > ```
-1. Installa le dipendenze con `npm install`
-2. Esegui con `npm start`
+4. Installa le dipendenze con `npm install`
+5. Esegui con `npm start`
 
 ## Struttura database
 ### Tabella utenti
