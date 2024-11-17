@@ -1,15 +1,13 @@
 // File: include/actions/config.js
 // Desc: Azioni per la configurazione del bot + broadcast
 // Data: 15/04/2024
-
 const { Markup } = require('telegraf');
-const pool = require("../db.js");
-
-const debug = true // DA AGGIORNARE
+const pool = require("../../src/db.js");
+const queries = require("../../src/queries.js");
 
 const broadcast = async (Context) => {
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
+    const Users = await queries.getUsers()
+    const user = Users.find(usr => usr.telegramID == Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
     await Context.editMessageText(`<b>Sei sicuro di voler mandare un messaggio a tutti gli utenti e admin del bot?</b>`, { parse_mode: 'HTML' })
@@ -22,8 +20,8 @@ const broadcast = async (Context) => {
 }
 
 const dobroadcast = async (Context) => {
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
+    const Users = await queries.getUsers()
+    const user = Users.find(usr => usr.telegramID == Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
     await Context.scene.enter("broadcast")
@@ -31,8 +29,8 @@ const dobroadcast = async (Context) => {
 
 const config = async (Context) => {
 
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
+    const Users = await queries.getUsers()
+    const user = Users.find(usr => usr.telegramID == Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
     const Config = (await pool.query("SELECT * FROM config"))[0][0]
@@ -49,8 +47,8 @@ const config = async (Context) => {
 }
 
 const editshopname = async (Context) => {
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
+    const Users = await queries.getUsers()
+    const user = Users.find(usr => usr.telegramID == Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
     await Context.scene.enter("editshopname")
@@ -58,8 +56,8 @@ const editshopname = async (Context) => {
 
 const currency = async (Context) => {
 
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
+    const Users = await queries.getUsers()
+    const user = Users.find(usr => usr.telegramID == Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
     const Config = (await pool.query(`SELECT * FROM config`))[0][0]
@@ -78,11 +76,11 @@ const currency = async (Context) => {
 }
 
 const euro = async (Context) => {
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
+    const Users = await queries.getUsers()
+    const user = Users.find(usr => usr.telegramID == Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
-    await pool.query(`UPDATE config SET currency='€'`)
+    await queries.updateCurrency('€')
     if (debug) console.warn(`${Date.now()} currency changed to euro. author user key ${user.id}`)
     await Context.editMessageText(`<b>Valuta impostata ad euro €!</b>`, { parse_mode: 'HTML' })
     let markup = {
@@ -94,11 +92,11 @@ const euro = async (Context) => {
 }
 
 const dollar = async (Context) => {
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
+    const Users = await queries.getUsers()
+    const user = Users.find(usr => usr.telegramID == Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
-    await pool.query(`UPDATE config SET currency='$'`)
+    await queries.updateCurrency('$')
     if (debug) console.warn(`${Date.now()} currency changed to dollar. author user key ${user.id}`)
     await Context.editMessageText(`<b>Valuta impostata a dollari $!</b>`, { parse_mode: 'HTML' })
     let markup = {
@@ -110,11 +108,11 @@ const dollar = async (Context) => {
 }
 
 const yen = async (Context) => {
-    const Users = (await getUsers())[0]
-    const user = Users.find(usr => usr.userID == Context.chat.id)
+    const Users = await queries.getUsers()
+    const user = Users.find(usr => usr.telegramID == Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
-    await pool.query(`UPDATE config SET currency='¥'`)
+    await queries.updateCurrency('¥')
     if (debug) console.warn(`${Date.now()} currency changed to yen. author user key ${user.id}`)
     await Context.editMessageText(`<b>Valuta impostata a yen ¥!</b>`, { parse_mode: 'HTML' })
     let markup = {
@@ -126,11 +124,11 @@ const yen = async (Context) => {
 }
 
 const pound = async (Context) => {
-    const Users = (await getUsers())[0]
-
+    const Users = await queries.getUsers()
+    const user = Users.find(usr => usr.telegramID == Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
-    await pool.query(`UPDATE config SET currency='£'`)
+    await queries.updateCurrency('£')
     if (debug) console.warn(`${Date.now()} currency changed to pound. author user key ${user.id}`)
     await Context.editMessageText(`<b>Valuta impostata a sterline £!</b>`, { parse_mode: 'HTML' })
     let markup = {
