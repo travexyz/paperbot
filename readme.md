@@ -6,7 +6,7 @@
   
 ## Configurazione
 1. Clona la repository localmente
-2. Utilizza un database con tabelle `users`, `products` e `config` strutturate come in [foto](#struttura-database)
+2. Utilizza un database con tabelle `users`, `products` e `config` strutturate come mostrato [qua sotto](#struttura-database)
 3. Crea un file `.env` impostato come il seguente:
 > ```
 > TOKEN=<token del bot>
@@ -14,14 +14,16 @@
 > DBUSER=<username per il db>
 > DBPWD=<password per il db>
 > DBNAME=<nome del db>
+> LOG_LEVEL=<livello di log>
 > ```
 4. Installa le dipendenze con `npm install`
-5. Esegui con `npm start`
+5. Esegui con `npm start` o `npm start pretty` per log più leggibili
 
 ## Struttura database
+![img.png](images/tables.png)
 ### Tabella utenti
-![usersdb](/images/usersdb.png)
+![users.png](./images/users.png)
 ### Tabella prodotti
-![productsdb](/images/productsdb.png)
+![products.png](./images/products.png)
 ### Tabella configurazione
-![configdb](/images/configdb.png)
+![config.png](./images/config.png)
