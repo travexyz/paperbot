@@ -1,48 +1,52 @@
 const logger = require("./logger");
 const pool = require("./db");
 
-async function getConfig() {
-    let results;
+async function getConfig(author) {
+    let config;
     try {
-        [results] = await pool.query("SELECT * FROM config");
+        [config] = await pool.query("SELECT * FROM config");
     } catch (err) {
-        logger.error(err, "Unknown error performing query in getConfig");
+        logger.error(err, `Unknown error performing query in getConfig by ${author}`);
+        throw err;
     } finally {
-        logger.debug("Successfully executed database query in getConfig");
+        logger.debug(`Successfully executed database query in getConfig by ${author}`);
     }
-    return results;
+    return config[0];
 }
 
-async function getProducts() {
-    let results;
+async function getProducts(author) {
+    let products;
     try {
-        [results] = await pool.query("SELECT * FROM products");
+        [products] = await pool.query("SELECT * FROM products");
     } catch (err) {
-        logger.error(err, "Unknown error performing query in getProducts");
+        logger.error(err, `Unknown error performing query in getProducts by ${author}`);
+        throw err;
     } finally {
-        logger.debug("Successfully executed database query in getProducts");
+        logger.debug(`Successfully executed database query in getProducts by ${author}`);
     }
-    return results;
+    return products;
 }
 
-async function getUsers() {
-    let results;
+async function getUsers(author) {
+    let users;
     try {
-        [results] = await pool.query("SELECT * FROM users");
+        [users] = await pool.query("SELECT * FROM users");
     } catch (err) {
-        logger.error(err, "Unknown error performing query in getUsers");
+        logger.error(err, `Unknown error performing query in getUsers by ${author}`);
+        throw err;
     } finally {
-        logger.debug("Successfully executed database query in getUsers");
+        logger.debug(`Successfully executed database query in getUsers by ${author}`);
     }
-    return results;
+    return users;
 }
 
-async function getUserById(id) {
+async function getUserById(id, author) {
     let results;
     try {
         [results] = await pool.query(`SELECT * FROM users WHERE id=?`, [id]);
     } catch (err) {
-        logger.error(err, "Unknown error performing query in getUserById");
+        logger.error(err, `Unknown error performing query in getUserById by ${author}`);
+        throw err;
     }
     return results[0];
 }
@@ -52,125 +56,137 @@ async function initializeUser(userId) {
         await pool.query(`INSERT INTO users (telegramID, balance, admin, banned, pisello)
                           VALUES (?, 0.00, 0, 0, ${Math.floor(Math.random() * 20)})`, [userId]);
     } catch (err) {
-        logger.error(err, "Unknown error performing query in initializeUser");
+        logger.error(err, `Unknown error performing query in initializeUser`);
+        throw err;
     } finally {
-        logger.info(`New user added to db: userId=${userId}`);
+        logger.info(`New user added to db userId=${userId}`);
     }
 }
 
-async function addProduct(name, price, stock, visible) {
+async function addProduct(name, price, stock, visible, author) {
     try {
         await pool.query(`INSERT INTO products (name, price, stock, visible)
                           VALUES (?, ?, ?, ?)`, [name, price, stock, visible ? 1 : 0]);
-        logger.warn(`Product added: name=${name}, price=${price}, stock=${stock}, visible=${visible}`);
+        logger.warn(`Product added by ${author}: name=${name}, price=${price}, stock=${stock}, visible=${visible}`);
     } catch (err) {
-        logger.error(err, "Unknown error performing query in addProduct");
+        logger.error(err, `Unknown error performing query in addProduct by ${author}`);
+        throw err;
     }
 }
 
-async function updateProductName(productId, newName) {
+async function updateProductName(productId, newName, author) {
     try {
         await pool.query(`UPDATE products
                           SET name=?
                           WHERE id = ?`, [newName, productId]);
-        logger.warn(`Product name changed: newName=${newName}, productId=${productId}`);
+        logger.warn(`Product name changed by ${author}: newName=${newName}, productId=${productId}`);
     } catch (err) {
-        logger.error(err, "Unknown error performing query in updateProductName");
+        logger.error(err, `Unknown error performing query in updateProductName by ${author}`);
+        throw err;
     }
 }
 
-async function updateProductPrice(productId, newPrice) {
+async function updateProductPrice(productId, newPrice, author) {
     try {
         await pool.query(`UPDATE products
                           SET price=?
                           WHERE id = ?`, [newPrice, productId]);
-        logger.warn(`Product price changed: newPrice=${newPrice}, productId=${productId}`);
+        logger.warn(`Product price changed by ${author}: newPrice=${newPrice}, productId=${productId}`);
     } catch (err) {
-        logger.error(err, "Unknown error performing query in updateProductPrice");
+        logger.error(err, `Unknown error performing query in updateProductPrice by ${author}`);
+        throw err;
     }
 }
 
-async function updateProductStock(productId, newStock) {
+async function updateProductStock(productId, newStock, author) {
     try {
         await pool.query(`UPDATE products
                           SET stock=?
                           WHERE id = ?`, [newStock, productId]);
-        logger.warn(`Product stock changed: newStock=${newStock}, productId=${productId}`);
+        logger.warn(`Product stock changed by ${author}: newStock=${newStock}, productId=${productId}`);
     } catch (err) {
-        logger.error(err, "Unknown error performing query in updateProductStock");
+        logger.error(err, `Unknown error performing query in updateProductStock by ${author}`);
+        throw err;
     }
 }
 
-async function deleteProduct(productId) {
+async function deleteProduct(productId, author) {
     try {
         await pool.query(`DELETE FROM products WHERE id=?`, [productId]);
-        logger.warn(`Product deleted: productId=${productId}`);
+        logger.warn(`Product deleted by ${author}: productId=${productId}`);
     } catch (err) {
-        logger.error(err, "Unknown error performing query in deleteProduct");
+        logger.error(err, `Unknown error performing query in deleteProduct by ${author}`);
+        throw err;
     }
 }
 
-async function updateProductVisibility(productId, visibility) {
+async function updateProductVisibility(productId, visibility, author) {
     try {
         await pool.query(`UPDATE products SET visible=? WHERE id=?`, [visibility, productId]);
-        logger.warn(`Product visibility updated: productId=${productId}, visibility=${visibility}`);
+        logger.warn(`Product visibility updated by ${author}: productId=${productId}, visibility=${visibility}`);
     } catch (err) {
-        logger.error(err, "Unknown error performing query in updateProductVisibility");
+        logger.error(err, `Unknown error performing query in updateProductVisibility by ${author}`);
+        throw err;
     }
 }
 
-async function addAdmin(userId) {
+async function addAdmin(userId, author) {
     try {
         await pool.query(`UPDATE users
                           SET admin= TRUE
                           WHERE id = ?`, [userId]);
-        logger.warn(`User added as admin: userId=${userId}`);
+        logger.warn(`User added as admin by ${author}: userId=${userId}`);
     } catch (err) {
-        logger.error(err, "Unknown error performing query in addAdmin");
+        logger.error(err, `Unknown error performing query in addAdmin by ${author}`);
+        throw err;
     }
 }
 
-async function removeAdmin(userId) {
+async function removeAdmin(userId, author) {
     try {
         await pool.query(`UPDATE users SET admin=FALSE WHERE id=?`, [userId]);
-        logger.warn(`User removed from admin: userId=${userId}`);
+        logger.warn(`User removed from admin by ${author}: userId=${userId}`);
     } catch (err) {
-        logger.error(err, "Unknown error performing query in removeAdmin");
+        logger.error(err, `Unknown error performing query in removeAdmin by ${author}`);
+        throw err;
     }
 }
 
-async function updateMotd(newMotd) {
+async function updateMotd(newMotd, author) {
     try {
         await pool.query(`UPDATE config
                           SET motd=?`, [newMotd]);
-        logger.warn(`MOTD edited: newMotd=${newMotd}`);
+        logger.warn(`MOTD edited by ${author}: newMotd=${newMotd}`);
     } catch (err) {
-        logger.error(err, "Unknown error performing query in updateMotd");
+        logger.error(err, `Unknown error performing query in updateMotd by ${author}`);
+        throw err;
     }
 }
 
-async function updateShopName(newShopName) {
+async function updateShopName(newShopName, author) {
     try {
         await pool.query(`UPDATE config
                           SET shopname=?`, [newShopName]);
-        logger.warn(`Shop name edited: newShopName=${newShopName}`);
+        logger.warn(`Shop name edited by ${author}: newShopName=${newShopName}`);
     } catch (err) {
-        logger.error(err, "Unknown error performing query in updateShopName");
+        logger.error(err, `Unknown error performing query in updateShopName by ${author}`);
+        throw err;
     }
 }
 
-async function setUserCredit(userId, newCredit) {
+async function setUserCredit(userId, newCredit, author) {
     try {
         await pool.query(`UPDATE users
                           SET balance=?
                           WHERE id = ?`, [parseFloat(newCredit), userId]);
-        logger.warn(`User credit set: newCredit=${parseFloat(newCredit)}, userId=${userId}`);
+        logger.warn(`User credit set by ${author}: newCredit=${parseFloat(newCredit)}, userId=${userId}`);
     } catch (err) {
-        logger.error(err, "Unknown error performing query in setUserCredit");
+        logger.error(err, `Unknown error performing query in setUserCredit by ${author}`);
+        throw err;
     }
 }
 
-async function addUserCredit(userId, addedCredit) {
+async function addUserCredit(userId, addedCredit, author) {
     try {
         const [user] = await pool.query(`SELECT balance
                                          FROM users
@@ -179,13 +195,14 @@ async function addUserCredit(userId, addedCredit) {
         await pool.query(`UPDATE users
                           SET balance=?
                           WHERE id = ?`, [newCredit, userId]);
-        logger.warn(`User credit added: addedCredit=${parseFloat(addedCredit)}, newCredit=${newCredit}, userId=${userId}`);
+        logger.warn(`User credit added by ${author}: addedCredit=${parseFloat(addedCredit)}, newCredit=${newCredit}, userId=${userId}`);
     } catch (err) {
-        logger.error(err, "Unknown error performing query in addUserCredit");
+        logger.error(err, `Unknown error performing query in addUserCredit by ${author}`);
+        throw err;
     }
 }
 
-async function removeUserCredit(userId, removedCredit) {
+async function removeUserCredit(userId, removedCredit, author) {
     try {
         const [user] = await pool.query(`SELECT balance
                                          FROM users
@@ -194,48 +211,51 @@ async function removeUserCredit(userId, removedCredit) {
         await pool.query(`UPDATE users
                           SET balance=?
                           WHERE id = ?`, [newCredit, userId]);
-        logger.warn(`User credit removed: removedCredit=${parseFloat(removedCredit)}, newCredit=${newCredit}, userId=${userId}`);
+        logger.warn(`User credit removed by ${author}: removedCredit=${parseFloat(removedCredit)}, newCredit=${newCredit}, userId=${userId}`);
     } catch (err) {
-        logger.error(err, "Unknown error performing query in removeUserCredit");
+        logger.error(err, `Unknown error performing query in removeUserCredit by ${author}`);
+        throw err;
     }
 }
 
-async function banUser(id) {
+async function banUser(id, author) {
     try {
         await pool.query(`UPDATE users SET banned=TRUE WHERE id=?`, [id]);
     } catch (err) {
-        logger.error(err, "Unknown error performing query in banUser");
+        logger.error(err, `Unknown error performing query in banUser by ${author}`);
+        throw err;
     }
 }
 
-async function broadcastMessage(message) {
+async function broadcastMessage(message, author) {
     try {
-        const [users] = await pool.query(`SELECT telegramID
-                                          FROM users`);
-        users.forEach(user => {
+        const [users] = await pool.query(`SELECT telegramID FROM users`);
+        for (const user of users) {
             client.telegram.sendMessage(user.telegramID, message);
-        });
-        logger.info(`Broadcasted message: message="${message}"`);
+        }
+        logger.info(`Broadcasted message by ${author}: message="${message}"`);
     } catch (err) {
-        logger.error(err, "Unknown error performing query in broadcastMessage");
+        logger.error(err, `Unknown error performing query in broadcastMessage by ${author}`);
+        throw err;
     }
 }
 
-async function updateCurrency(newCurrency) {
+async function updateCurrency(newCurrency, author) {
     try {
         await pool.query(`UPDATE config SET currency=?`, [newCurrency]);
-        logger.warn(`Currency updated: newCurrency=${newCurrency}`);
+        logger.warn(`Currency updated by ${author}: newCurrency=${newCurrency}`);
     } catch (err) {
-        logger.error(err, "Unknown error performing query in updateCurrency");
+        logger.error(err, `Unknown error performing query in updateCurrency by ${author}`);
+        throw err;
     }
 }
 
 const getProductById = async (id) => {
     try {
-        const product = await db.query('SELECT * FROM products WHERE id = $1', [id]);
-        return product.rows[0];
+        const [product] = await pool.query('SELECT * FROM products WHERE id = ?', [id]);
+        return product[0]
     } catch (error) {
-        console.error('Errore durante il recupero del prodotto per ID:', error);
+        logger.error(err, `Unknown error performing query in getProductById by ${author}`);
         throw error;
     }
 }
@@ -262,5 +282,6 @@ module.exports = {
     banUser,
     broadcastMessage,
     updateCurrency,
-    getProductById
+    getProductById,
+    getUserById
 };

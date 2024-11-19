@@ -5,7 +5,7 @@ const queries = require('../src/queries.js');
 const addProductScene = new Scenes.WizardScene(
     'addproduct',
     (context) => {
-        context.reply("Inserisci il nome del prodotto (\"cancel\" per annullare):");
+        context.reply("Inserisci il nome del prodotto, (\"cancel\" per annullare):");
         context.wizard.state.productInfo = {};
         return context.wizard.next();
     },
@@ -24,17 +24,17 @@ const addProductScene = new Scenes.WizardScene(
         return context.wizard.next();
     }, (context) => {
         context.wizard.state.productInfo.stock = context.message.text;
-        context.reply("Vuoi nascondere o mostrare il prodotto nella lista? (0 nascondi, 1 mostra)");
+        context.reply("Vuoi nascondere o mostrare il prodotto nella lista? 0 nascondi, 1 mostra");
         return context.wizard.next();
     }, async (context) => {
         context.wizard.state.productInfo.visible = (context.message.text === "1");
         const { name, price, stock, visible } = context.wizard.state.productInfo;
         try {
-            await queries.addProduct(name, price, stock, visible);
+            await queries.addProduct(name, price, stock, visible, context.from.username);
         } catch (err) {
             context.reply("Errore nell'aggiunta del prodotto.");
         } finally {
-            context.reply(`Prodotto aggiunto!`);
+            context.reply('Prodotto aggiunto!');
         }
         return context.scene.leave();
     },
@@ -51,7 +51,7 @@ const editNameScene = new Scenes.WizardScene(
             return context.scene.leave();
         }
         try {
-            await queries.updateProductName(context.session.__scenes.state.productId, context.message.text);
+            await queries.updateProductName(context.session.__scenes.state.productId, context.message.text, context.from.username);
         } catch (err) {
             context.reply("Errore nella modifica del nome del prodotto.");
         } finally {
@@ -72,7 +72,7 @@ const editPriceScene = new Scenes.WizardScene(
             return context.scene.leave();
         }
         try {
-            await queries.updateProductPrice(context.session.__scenes.state.productId, context.message.text);
+            await queries.updateProductPrice(context.session.__scenes.state.productId, context.message.text, context.from.username);
         } catch (err) {
             context.reply("Errore nella modifica del prezzo del prodotto.");
         } finally {
@@ -85,7 +85,7 @@ const editPriceScene = new Scenes.WizardScene(
 const editStockScene = new Scenes.WizardScene(
     'editstock',
     (context) => {
-        context.reply("Inserisci la nuova quantità del prodotto (-1 infinito, 0 terminato, \"cancel\" per annullare):");
+        context.reply("Inserisci la nuova quantità del prodotto (-1 infinito, 0 terminato) (\"cancel\" per annullare):");
         return context.wizard.next();
     }, async (context) => {
         if (context.message.text === "cancel") {
@@ -93,7 +93,7 @@ const editStockScene = new Scenes.WizardScene(
             return context.scene.leave();
         }
         try {
-            await queries.updateProductStock(context.session.__scenes.state.productId, context.message.text);
+            await queries.updateProductStock(context.session.__scenes.state.productId, context.message.text, context.from.username);
         } catch (err) {
             context.reply("Errore nella modifica della quantità del prodotto.");
         } finally {
@@ -116,7 +116,7 @@ const addAdminScene = new Scenes.WizardScene(
         context.wizard.state.id = context.message.text;
         client.telegram.getChat(context.wizard.state.id)
             .then(chat => {
-                context.reply(`Sei sicuro di voler aggiungere ${chat.username} (${context.wizard.state.id}) alla lista di amministratori? (0 no, 1 si)`);
+                context.reply(`Sei sicuro di voler aggiungere ${chat.username} ID: ${context.wizard.state.id} alla lista di amministratori? (0 no, 1 si)`);
             })
             .catch(_err => {
                 context.reply(`Impossibile trovare l'utente, verifica che l'ID (non l'username) sia corretto. Riprova.`);
@@ -126,14 +126,14 @@ const addAdminScene = new Scenes.WizardScene(
     }, async (context) => {
         if (context.message.text === "1") {
             try {
-                await queries.addAdmin(context.wizard.state.id);
+                await queries.addAdmin(context.wizard.state.id, context.from.username);
             } catch (err) {
                 context.reply("Errore nell'aggiunta dell'amministratore.");
             } finally {
                 context.reply(`Utente aggiunto alla lista degli amministratori!`);
             }
         } else {
-            context.reply(`OK, utente NON aggiunto!`);
+            context.reply('OK, utente non aggiunto!');
         }
         return context.scene.leave();
     },
@@ -150,7 +150,7 @@ const editMotdScene = new Scenes.WizardScene(
             return context.scene.leave();
         }
         try {
-            await queries.updateMotd(context.message.text);
+            await queries.updateMotd(context.message.text, context.from.username);
         } catch (err) {
             context.reply("Errore nella modifica del Messaggio del Giorno.");
         } finally {
@@ -171,7 +171,7 @@ const editShopNameScene = new Scenes.WizardScene(
             return context.scene.leave();
         }
         try {
-            await queries.updateShopName(context.message.text);
+            await queries.updateShopName(context.message.text, context.from.username);
         } catch (err) {
             context.reply("Errore nella modifica del nome dello shop.");
         } finally {
@@ -185,12 +185,12 @@ const setCreditScene = new Scenes.WizardScene(
     'setcredit',
     async (context) => {
         const Users = await queries.getUsers();
-        var user = Users.find(usr => usr.id === parseInt(context.session.__scenes.state.id));
+        var user = Users.find(user => user.id === parseInt(context.session.__scenes.state.id));
         var username;
         await client.telegram.getChat(user.telegramID)
             .then(chat => username = chat.username);
 
-        context.reply(`Inserisci il credito da impostare all'utente ${username} (${user.telegramID}) ("cancel" per annullare):`);
+        context.reply(`Inserisci il credito da impostare all'utente ${username} ID: ${user.telegramID} ("cancel" per annullare):`);
         return context.wizard.next();
     }, async (context) => {
         if (context.message.text === "cancel") {
@@ -199,7 +199,7 @@ const setCreditScene = new Scenes.WizardScene(
         }
         var credit = context.message.text;
         try {
-            await queries.setUserCredit(context.session.__scenes.state.id, credit);
+            await queries.setUserCredit(context.session.__scenes.state.id, credit, context.from.username);
         } catch (err) {
             context.reply("Errore nell'impostare il credito.");
         } finally {
@@ -213,12 +213,12 @@ const addCreditScene = new Scenes.WizardScene(
     'addcredit',
     async (context) => {
         const Users = await queries.getUsers();
-        var user = Users.find(usr => usr.id == context.session.__scenes.state.id);
+        var user = Users.find(user => user.telegramID === context.session.__scenes.state.id);
         var username;
         await client.telegram.getChat(user.telegramID)
             .then(chat => username = chat.username);
 
-        context.reply(`Inserisci il credito da aggiungere all'utente ${username} (${user.telegramID}) ("cancel" per annullare):`);
+        context.reply(`Inserisci il credito da aggiungere all'utente ${username} ID: ${user.telegramID} ("cancel" per annullare):`);
         return context.wizard.next();
     }, async (context) => {
         if (context.message.text === "cancel") {
@@ -226,7 +226,7 @@ const addCreditScene = new Scenes.WizardScene(
             return context.scene.leave();
         }
         try {
-            await queries.addUserCredit(context.session.__scenes.state.id, context.message.text);
+            await queries.addUserCredit(context.session.__scenes.state.id, context.message.text, context.from.username);
         } catch (err) {
             context.reply("Errore nell'aggiunta del credito.");
         } finally {
@@ -240,12 +240,12 @@ const rmCreditScene = new Scenes.WizardScene(
     'rmcredit',
     async (context) => {
         const Users = await queries.getUsers();
-        var user = Users.find(usr => usr.id == context.session.__scenes.state.id);
+        var user = Users.find(user => user.telegramID === context.session.__scenes.state.id);
         var username;
         await client.telegram.getChat(user.telegramID)
             .then(chat => username = chat.username);
 
-        context.reply(`Inserisci il credito da rimuovere all'utente ${username} (${user.telegramID}) ("cancel" per annullare):`);
+        context.reply(`Inserisci il credito da rimuovere all'utente ${username} ID: ${user.telegramID} ("cancel" per annullare):`);
         return context.wizard.next();
     }, async (context) => {
         if (context.message.text === "cancel") {
@@ -253,7 +253,7 @@ const rmCreditScene = new Scenes.WizardScene(
             return context.scene.leave();
         }
         try {
-            await queries.removeUserCredit(context.session.__scenes.state.id, context.message.text);
+            await queries.removeUserCredit(context.session.__scenes.state.id, context.message.text, context.from.username);
         } catch (err) {
             context.reply("Errore nella rimozione del credito.");
         } finally {
@@ -274,7 +274,7 @@ const broadcastScene = new Scenes.WizardScene(
             return context.scene.leave();
         }
         try {
-            await queries.broadcastMessage(context.message.text);
+            await queries.broadcastMessage(context.message.text, context.from.username);
         } catch (err) {
             context.reply("Errore nell'invio del messaggio.");
         } finally {

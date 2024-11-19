@@ -10,7 +10,7 @@ const queries = require("../../src/queries.js");
 const addproduct = async (Context) => {
 
     const Users = await queries.getUsers()
-    const user = Users.find(usr => usr.telegramID == Context.chat.id)
+    const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
     await Context.scene.enter("addproduct")
@@ -18,16 +18,16 @@ const addproduct = async (Context) => {
 
 const rmproduct = async (Context) => {
     const Users = await queries.getUsers()
-    const user = Users.find(usr => usr.telegramID == Context.chat.id)
+    const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
     await Context.editMessageText(`<b>Seleziona il prodotto che vuoi rimuovere:</b>`, { parse_mode: 'HTML' })
 
     let keyboard = []
-    var Products = await queries.getProducts()
-    Products.forEach(item => {
+    var Products = await queries.getProducts(Context.from.username)
+    for (const item of Products) {
         keyboard.push([Markup.button.callback(item.name, `rmproduct-${item.id}`)])
-    })
+    }
     keyboard.push([Markup.button.callback("↩️ Indietro", "panel")])
     let markup = {
         inline_keyboard: keyboard
@@ -37,14 +37,14 @@ const rmproduct = async (Context) => {
 
 const rmproductconfirm = async (Context) => {
     const Users = await queries.getUsers()
-    const user = Users.find(usr => usr.telegramID == Context.chat.id)
+    const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
 
     let id = Context.match[0].split("-")[1]
     var product = await queries.getProductById(id)
 
-    await Context.editMessageText(`<b>Sei sicuro che vuoi eliminare il prodotto? <code>nome: ${product.name}</code>\n<code>prezzo: ${product.price}</code>\n<code>stock: ${product.stock}</code>\n<code>visibiltà: ${(product.visible ? "mostrato" : "nascosto")}</code></b>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`<b>Sei sicuro che vuoi eliminare il prodotto?\n✍️ Nome: <code>${product.name}</code>\n💵 Prezzo: <code>${product.price}</code>\n🎰 Stock: <code>${product.stock}</code>\n👁️‍🗨️ Visibiltà: <code>${(product.visible ? "mostrato" : "nascosto")}</code></b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("✅", `productrm-${product.id}`), Markup.button.callback("❌", "rmproduct")]
@@ -55,13 +55,12 @@ const rmproductconfirm = async (Context) => {
 
 const productrm = async (Context) => {
     const Users = await queries.getUsers()
-    const user = Users.find(usr => usr.telegramID == Context.chat.id)
+    const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
 
     let id = Context.match[0].split("-")[1]
-    await queries.deleteProduct(id)
-    if (debug) console.warn(`${Date.now()} product deleted. victim product key: ${id}, author user key: ${user.id}`)
+    await queries.deleteProduct(id, Context.from.username)
     await Context.editMessageText(`<b>Prodotto eliminato!</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
@@ -73,16 +72,16 @@ const productrm = async (Context) => {
 
 const editproduct = async (Context) => {
     const Users = await queries.getUsers()
-    const user = Users.find(usr => usr.telegramID == Context.chat.id)
+    const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
     await Context.editMessageText(`<b>Seleziona il prodotto che vuoi modificare:</b>`, { parse_mode: 'HTML' })
 
     let keyboard = []
-    var Products = await queries.getProducts()
-    Products.forEach(item => {
+    var Products = await queries.getProducts(Context.from.username)
+    for (const item of Products) {
         keyboard.push([Markup.button.callback(item.name, `editproduct-${item.id}`)])
-    })
+    }
     keyboard.push([Markup.button.callback("↩️ Indietro", "panel")])
     let markup = {
         inline_keyboard: keyboard
@@ -92,18 +91,18 @@ const editproduct = async (Context) => {
 
 const editproductconfirm = async (Context) => {
     const Users = await queries.getUsers()
-    const user = Users.find(usr => usr.telegramID == Context.chat.id)
+    const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
 
     let id = Context.match[0].split("-")[1]
     var product = await queries.getProductById(id)
-    await Context.editMessageText(`<b>Cosa vuoi cambiare del prodotto?\n<code>nome: ${product.name}</code>\n<code>prezzo: ${product.price}</code>\n<code>stock: ${product.stock}</code>\n<code>visibiltà: ${(product.visible ? "mostrato" : "nascosto")}</code></b>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`<b>Cosa vuoi cambiare del prodotto?\n✍️ Nome: <code>${product.name}</code>\n💵 Prezzo: <code>${product.price}</code>\n🎰 Stock: <code>${product.stock}</code>\n👁️‍🗨️ Visibiltà: <code>${(product.visible ? "mostrato" : "nascosto")}</code></b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
-            [Markup.button.callback("Nome", `changename-${product.id}`), Markup.button.callback("Prezzo", `changeprice-${product.id}`), Markup.button.callback("Stock", `changestock-${product.id}`)],
-            [Markup.button.callback("Visibilita", `changevis-${product.id}`)],
-            [Markup.button.callback("Rimuovi", `rmproduct-${product.id}`)],
+            [Markup.button.callback("✍️ Nome", `changename-${product.id}`), Markup.button.callback("💵 Prezzo", `changeprice-${product.id}`), Markup.button.callback("🎰 Stock", `changestock-${product.id}`)],
+            [Markup.button.callback("👁️‍🗨️ Visibilita", `changevis-${product.id}`)],
+            [Markup.button.callback("❌ Rimuovi", `rmproduct-${product.id}`)],
             [Markup.button.callback("↩️ Indietro", "editproduct")]
         ]
     }
@@ -113,7 +112,7 @@ const editproductconfirm = async (Context) => {
 const changename = async (Context) => {
 
     const Users = await queries.getUsers()
-    const user = Users.find(usr => usr.telegramID == Context.chat.id)
+    const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
     let id = Context.match[0].split("-")[1]
@@ -123,7 +122,7 @@ const changename = async (Context) => {
 const changeprice = async (Context) => {
 
     const Users = await queries.getUsers()
-    const user = Users.find(usr => usr.telegramID == Context.chat.id)
+    const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
     let id = Context.match[0].split("-")[1]
@@ -133,7 +132,7 @@ const changeprice = async (Context) => {
 const changestock = async (Context) => {
 
     const Users = await queries.getUsers()
-    const user = Users.find(usr => usr.telegramID == Context.chat.id)
+    const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
     let id = Context.match[0].split("-")[1]
@@ -142,7 +141,7 @@ const changestock = async (Context) => {
 
 const changevis = async (Context) => {
     const Users = await queries.getUsers()
-    const user = Users.find(usr => usr.telegramID == Context.chat.id)
+    const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
 
@@ -159,12 +158,12 @@ const changevis = async (Context) => {
 
 const hide = async (Context) => {
     const Users = await queries.getUsers()
-    const user = Users.find(usr => usr.telegramID == Context.chat.id)
+    const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
 
     let id = Context.match[0].split("-")[1]
-    await queries.updateProductVisibility(id, false)
+    await queries.updateProductVisibility(id, false, Context.from.username)
     await Context.editMessageText(`<b>Prodotto nascosto!</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
@@ -176,12 +175,12 @@ const hide = async (Context) => {
 
 const show = async (Context) => {
     const Users = await queries.getUsers()
-    const user = Users.find(usr => usr.telegramID == Context.chat.id)
+    const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
 
     let id = Context.match[0].split("-")[1]
-    await queries.updateProductVisibility(id, true)
+    await queries.updateProductVisibility(id, true, Context.from.username)
     await Context.editMessageText(`<b>Il prodotto è ora visibile!</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
