@@ -40,34 +40,12 @@ const manageadmins = async (Context) => {
     }
     for (const user of Users) {
         let username = await getUsername(user);
-        keyboard.inline_keyboard.push([Markup.button.callback(username, `manageadmin-${user.id}`)])
+        keyboard.inline_keyboard.push([Markup.button.callback(username, `manageuser-${user.id}`)])
     }
-    keyboard.inline_keyboard.push([Markup.button.callback("➕ Aggiungi admin", "addadmin")])
+    keyboard.inline_keyboard.push([Markup.button.callback("➕ Aggiungi admin da ID", "addadmin")])
     keyboard.inline_keyboard.push([Markup.button.callback("↩️ Indietro", "panel")])
 
     await Context.editMessageReplyMarkup(keyboard)
-}
-
-const manageadmin = async (Context) => {
-    const Users = await queries.getUsers(Context.from.username);
-    const user = Users.find(user => user.telegramID === Context.chat.id)
-    if (user.banned) return
-    if (!user.admin) return
-
-    var id = Context.match[0].split("-")[1];
-    const target_user = await queries.getUserById(id, Context.from.username);
-
-    let username = await getUsername(target_user);
-
-    await Context.editMessageText(`<b>‼️ Amministratore</b>\nUsername: <code>${username}</code>\nID: <code>${target_user.telegramID}</code>\nNel database da: <code>${target_user.created_at.toISOString()}</code>\nUltimo aggiornamento: <code>${target_user.updated_at.toISOString()}</code>\n`, { parse_mode: 'HTML' });
-    let markup = {
-        inline_keyboard: [
-            [Markup.button.callback("❌ Rimuovi", `rmadminconfirm-${target_user.id}`)],
-            [Markup.button.callback("🔨 Bandisci", `banuser-${target_user.id}`)],
-            [Markup.button.callback("↩️ Indietro", "manageusers")]
-        ]
-    }
-    await Context.editMessageReplyMarkup(markup);
 }
 
 const addadmin = async (Context) => {
@@ -106,10 +84,10 @@ const rmadminconfirm = async (Context) => {
 
     let username = await getUsername(target_user);
 
-    await Context.editMessageText(`<b>Sei sicuro che vuoi rimuovere <code>${username} - ID: ${target_user.telegramID}</code> dagli amministratori?</b>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`<b>Sei sicuro che vuoi rimuovere <code>${username} (${target_user.telegramID})</code> dagli amministratori?</b>`, { parse_mode: 'HTML' })
     let markup = {
         inline_keyboard: [
-            [Markup.button.callback("✅", `adminrm-${target_user.id}`), Markup.button.callback("❌", "rmadmin")]
+            [Markup.button.callback("✅", `adminrm-${target_user.id}`), Markup.button.callback("❌", `manageuser-${target_user.id}`)]
         ]
     }
     await Context.editMessageReplyMarkup(markup)
@@ -134,4 +112,4 @@ const adminrm = async (Context) => {
     await Context.editMessageReplyMarkup(markup)
 }
 
-module.exports = { manageadmins, manageadmin, addadmin, adminadd, rmadminconfirm, adminrm }
+module.exports = { manageadmins, addadmin, adminadd, rmadminconfirm, adminrm }

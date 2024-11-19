@@ -1,5 +1,6 @@
 const logger = require("./logger");
 const pool = require("./db");
+const client = require("./client");
 
 async function getConfig(author) {
     let config;

@@ -40,7 +40,6 @@ client.action(/^hide-\d+/, product_actions.hide)
 client.action(/^show-\d+/, product_actions.show)
 
 client.action("manageadmins", admin_actions.manageadmins)
-client.action(/^manageadmin-\d+/, admin_actions.manageadmin)
 client.action("addadmin", admin_actions.addadmin)
 client.action("adminadd", admin_actions.adminadd)
 client.action(/^rmadmin-\d+/, admin_actions.rmadminconfirm)

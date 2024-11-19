@@ -213,7 +213,7 @@ const addCreditScene = new Scenes.WizardScene(
     'addcredit',
     async (context) => {
         const Users = await queries.getUsers();
-        var user = Users.find(user => user.telegramID === context.session.__scenes.state.id);
+        var user = Users.find(user => user.id == context.session.__scenes.state.id);
         var username;
         await client.telegram.getChat(user.telegramID)
             .then(chat => username = chat.username);
@@ -230,7 +230,9 @@ const addCreditScene = new Scenes.WizardScene(
         } catch (err) {
             context.reply("Errore nell'aggiunta del credito.");
         } finally {
-            context.reply(`Credito dell'utente dopo l'aggiunta: ${context.message.text}`);
+            const Users = await queries.getUsers();
+            var user = Users.find(user => user.id == context.session.__scenes.state.id);
+            context.reply(`Credito dell'utente dopo l'aggiunta: ${user.balance}`);
         }
         return context.scene.leave();
     }
@@ -240,7 +242,7 @@ const rmCreditScene = new Scenes.WizardScene(
     'rmcredit',
     async (context) => {
         const Users = await queries.getUsers();
-        var user = Users.find(user => user.telegramID === context.session.__scenes.state.id);
+        var user = Users.find(user => user.id == context.session.__scenes.state.id);
         var username;
         await client.telegram.getChat(user.telegramID)
             .then(chat => username = chat.username);
@@ -257,7 +259,9 @@ const rmCreditScene = new Scenes.WizardScene(
         } catch (err) {
             context.reply("Errore nella rimozione del credito.");
         } finally {
-            context.reply(`Credito dell'utente dopo la rimozione: ${context.message.text}`);
+            const Users = await queries.getUsers();
+            var user = Users.find(user => user.id == context.session.__scenes.state.id);
+            context.reply(`Credito dell'utente dopo la rimozione: ${user.balance}`);
         }
         return context.scene.leave();
     }

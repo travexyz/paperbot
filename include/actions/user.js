@@ -60,11 +60,12 @@ const manageuser = async (Context) => {
 
     let username = await getUsername(user)
 
-    await Context.editMessageText(`<b>‼️ Utente</b> <code>${username}</code>\nID: <code>${target_user.telegramID}</code>\n💵 <b>Grana:</b> <code>${target_user.balance}${Config.currency}</code>\n🛠️ <b>Amministratore:</b> <code>${(target_user.admin) ? "Yes" : "No"}</code>\nNel database da: <code>${target_user.created_at.toISOString()}</code>\nUltimo aggiornamento: <code>${target_user.updated_at.toISOString()}</code>\n`, { parse_mode: 'HTML' });
+    await Context.editMessageText(`<b>‼️ Utente ${(user.admin) ? "amministratore" : ""}</b>\n🪪 <b>Username:</b> <code>${username}</code>\n🆔 ID: <code>${target_user.telegramID}</code>\n💵 <b>Grana:</b> <code>${target_user.balance}${Config.currency}</code>\n🛠️ <b>Amministratore:</b> <code>${(target_user.admin) ? "Yes" : "No"}</code>\n\nNel database da: <code>${target_user.created_at.toISOString()}</code>\n\nUltimo aggiornamento: <code>${target_user.updated_at.toISOString()}</code>\n`, { parse_mode: 'HTML' });
     let markup = {
         inline_keyboard: [
-            [Markup.button.callback("Imposta Credito", `setcredit-${target_user.id}`), Markup.button.callback("Aggiungi Credito", `addcredit-${target_user.id}`), Markup.button.callback("Rimuovi Credito", `rmcredit-${target_user.id}`)],
-            [Markup.button.callback("Bandisci", `banuser-${target_user.id}`)],
+            [Markup.button.callback("Set Credit", `setcredit-${target_user.id}`), Markup.button.callback("Add Credit", `addcredit-${target_user.id}`), Markup.button.callback("Remove Credit", `rmcredit-${target_user.id}`)],
+            (user.admin) ? [Markup.button.callback("❌ Rimuovi amministratore", `rmadmin-${target_user.id}`)] : [Markup.button.callback("➕ Rendi amministratore", `addadmin-${target_user.id}`)],
+            [Markup.button.callback("⛔ Bandisci", `banuser-${target_user.id}`)],
             [Markup.button.callback("↩️ Indietro", "manageusers")]
         ]
     };
