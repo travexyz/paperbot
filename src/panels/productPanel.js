@@ -1,15 +1,9 @@
-// File: include/actions/product.js
-// Descrizione: File contenente le azioni del pannello prodotti del bot
-// Autore: travexyz
-// Data: 14/04/2024
-
 const { Markup } = require('telegraf')
-const pool = require('../../src/db.js');
-const queries = require("../../src/queries.js");
+const queries = require("../config/database/dbQueries");
 
 const addproduct = async (Context) => {
 
-    const Users = await queries.getUsers()
+    const Users = await queries.getUsers(Context.from.id)
     const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
@@ -17,7 +11,7 @@ const addproduct = async (Context) => {
 }
 
 const rmproduct = async (Context) => {
-    const Users = await queries.getUsers()
+    const Users = await queries.getUsers(Context.from.id)
     const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
@@ -36,7 +30,7 @@ const rmproduct = async (Context) => {
 }
 
 const rmproductconfirm = async (Context) => {
-    const Users = await queries.getUsers()
+    const Users = await queries.getUsers(Context.from.id)
     const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
@@ -54,7 +48,7 @@ const rmproductconfirm = async (Context) => {
 }
 
 const productrm = async (Context) => {
-    const Users = await queries.getUsers()
+    const Users = await queries.getUsers(Context.from.id)
     const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
@@ -71,7 +65,7 @@ const productrm = async (Context) => {
 }
 
 const editproduct = async (Context) => {
-    const Users = await queries.getUsers()
+    const Users = await queries.getUsers(Context.from.id)
     const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
@@ -90,7 +84,7 @@ const editproduct = async (Context) => {
 }
 
 const editproductconfirm = async (Context) => {
-    const Users = await queries.getUsers()
+    const Users = await queries.getUsers(Context.from.id)
     const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
@@ -111,7 +105,7 @@ const editproductconfirm = async (Context) => {
 
 const changename = async (Context) => {
 
-    const Users = await queries.getUsers()
+    const Users = await queries.getUsers(Context.from.id)
     const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
@@ -121,7 +115,7 @@ const changename = async (Context) => {
 
 const changeprice = async (Context) => {
 
-    const Users = await queries.getUsers()
+    const Users = await queries.getUsers(Context.from.id)
     const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
@@ -131,7 +125,7 @@ const changeprice = async (Context) => {
 
 const changestock = async (Context) => {
 
-    const Users = await queries.getUsers()
+    const Users = await queries.getUsers(Context.from.id)
     const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
@@ -140,7 +134,7 @@ const changestock = async (Context) => {
 }
 
 const changevis = async (Context) => {
-    const Users = await queries.getUsers()
+    const Users = await queries.getUsers(Context.from.id)
     const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
@@ -157,7 +151,7 @@ const changevis = async (Context) => {
 }
 
 const hide = async (Context) => {
-    const Users = await queries.getUsers()
+    const Users = await queries.getUsers(Context.from.id)
     const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
@@ -174,7 +168,7 @@ const hide = async (Context) => {
 }
 
 const show = async (Context) => {
-    const Users = await queries.getUsers()
+    const Users = await queries.getUsers(Context.from.id)
     const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return

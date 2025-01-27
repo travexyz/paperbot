@@ -1,18 +1,18 @@
-const logger = require("./logger.js");
+const logger = require("./config/pinoConfig");
 require('dotenv').config();
 const {
     Scenes, session
 } = require('telegraf')
 
-const scenes = require("../include/scenes.js");
-const main_actions = require("../include/actions/main.js");
-const product_actions = require("../include/actions/product.js");
-const admin_actions = require("../include/actions/admin.js");
-const user_actions = require("../include/actions/user.js");
-const config_actions = require("../include/actions/config.js");
-const motd_actions = require("../include/actions/motd.js");
+const scenes = require("./scenes/scenes");
+const main_actions = require("./panels/mainPanel");
+const product_actions = require("./panels/productPanel");
+const admin_actions = require("./panels/adminPanel");
+const user_actions = require("./panels/userPanel");
+const config_actions = require("./panels/configPanel");
+const motd_actions = require("./panels/motdPanel");
 
-const client = require('./client.js');
+const client = require('./config/clientConfig');
 
 client.use(session());
 client.use(new Scenes.Stage([scenes.addProductScene, scenes.editNameScene, scenes.editPriceScene, scenes.editStockScene, scenes.addAdminScene, scenes.editMotdScene, scenes.setCreditScene, scenes.addCreditScene, scenes.rmCreditScene, scenes.editShopNameScene, scenes.broadcastScene]));

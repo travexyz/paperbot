@@ -1,15 +1,15 @@
 const { Markup } = require('telegraf');
-const queries = require('../../src/queries.js');
+const queries = require('../config/database/dbQueries');
 
 const start = async (Context) => {
-    const Users = await queries.getUsers();
+    const Users = await queries.getUsers(Context.from.id);
     const user = Users.find(user => user.telegramID === Context.chat.id);
 
     if (!user) {
         await queries.initializeUser(Context.chat.id);
     } else if (user.banned) return;
 
-    const config = await queries.getConfig();
+    const config = await queries.getConfig(Context.from.id);
     Context.reply(`*${config.shopname} Bot — Creato da ||travexyz||*`, {
         parse_mode: "MarkdownV2",
         ...Markup.inlineKeyboard([[Markup.button.callback("👽 Entra", "main")]])
@@ -17,11 +17,11 @@ const start = async (Context) => {
 };
 
 const main = async (Context) => {
-    const Users = await queries.getUsers();
+    const Users = await queries.getUsers(Context.from.id);
     const user = Users.find(user => user.telegramID === Context.chat.id);
     if (user.banned) return;
 
-    const config = await queries.getConfig();
+    const config = await queries.getConfig(Context.from.id);
     await Context.editMessageText(`😎 Ciao <b>${(Context.from.username) ? Context.from.username : Context.from.first_name}</b>, benvenuto in <b>${config.shopname}</b>!\n\n${(config.motd !== null) ? `<code>${config.motd}</code>` : `${new Date().toLocaleDateString()}`}`, { parse_mode: 'HTML' });
 
     let keyboard = {
@@ -39,14 +39,14 @@ const main = async (Context) => {
 };
 
 const products = async (Context) => {
-    const Users = await queries.getUsers();
+    const Users = await queries.getUsers(Context.from.id);
     const user = Users.find(user => user.telegramID === Context.chat.id);
     if (user.banned) return;
 
-    const config = await queries.getConfig();
+    const config = await queries.getConfig(Context.from.id);
     let message = `📚 <b>Prodotti di ${config.shopname}\n</b>💰 <b>Grana:</b> <code>${user.balance}${config.currency}</code>\n\n`;
 
-    const Products = await queries.getProducts();
+    const Products = await queries.getProducts(Context.from.id);
     for (const item of Products) {
         if (item.hidden && !user.admin) continue;
 
@@ -70,11 +70,11 @@ const products = async (Context) => {
 };
 
 const account = async (Context) => {
-    const Users = await queries.getUsers();
+    const Users = await queries.getUsers(Context.from.id);
     const user = Users.find(user => user.telegramID === Context.chat.id);
     if (user.banned) return;
 
-    const config = await queries.getConfig();
+    const config = await queries.getConfig(Context.from.id);
     await Context.editMessageText(`${(user.admin) ? "🔱 <b>Amministratore</b>\n" : ""}👤 <b>Username</b> <code>${Context.chat.username}</code>
 🆔 <b>ID:</b> <code>${Context.chat.id}</code>
 💵 <b>Grana:</b> <code>${user.balance}${config.currency}</code>
@@ -88,7 +88,7 @@ const account = async (Context) => {
 };
 
 const info = async (Context) => {
-    const Users = await queries.getUsers();
+    const Users = await queries.getUsers(Context.from.id);
     const user = Users.find(user => user.telegramID === Context.chat.id);
     if (user.banned) return;
     await Context.editMessageText("*🤖 Creato da ||travexyz|| con tanto ||❤️|| in nodejs*", { parse_mode: 'MarkdownV2' });
@@ -102,7 +102,7 @@ const info = async (Context) => {
 };
 
 const panel = async (Context) => {
-    const Users = await queries.getUsers();
+    const Users = await queries.getUsers(Context.from.id);
     const user = Users.find(user => user.telegramID === Context.chat.id);
     if (user.banned) return;
     if (!user.admin) return;

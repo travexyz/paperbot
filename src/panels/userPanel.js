@@ -1,10 +1,6 @@
-// File: include/actions/user.js
-// Description: File contenente le azioni per la gestione utenti nel bot
-// Data: 14/04/2024
-
 const { Markup } = require('telegraf');
-const client = require("../../src/client.js");
-const queries = require("../../src/queries.js");
+const client = require("../config/clientConfig");
+const queries = require("../config/database/dbQueries");
 
 const getUsername = async (user) => {
     let username;
@@ -60,7 +56,7 @@ const manageuser = async (Context) => {
 
     let username = await getUsername(user)
 
-    await Context.editMessageText(`<b>‼️ Utente ${(user.admin) ? "amministratore" : ""}</b>\n🪪 <b>Username:</b> <code>${username}</code>\n🆔 ID: <code>${target_user.telegramID}</code>\n💵 <b>Grana:</b> <code>${target_user.balance}${Config.currency}</code>\n🛠️ <b>Amministratore:</b> <code>${(target_user.admin) ? "Yes" : "No"}</code>\n\nNel database da: <code>${target_user.created_at.toISOString()}</code>\n\nUltimo aggiornamento: <code>${target_user.updated_at.toISOString()}</code>\n`, { parse_mode: 'HTML' });
+    await Context.editMessageText(`<b>‼️ Utente ${(user.admin) ? "amministratore" : ""}</b>\n🪪 <b>Username:</b> <code>${username}</code>\n🆔 ID: <code>${target_user.telegramID}</code>\n💵 <b>Grana:</b> <code>${target_user.balance}${Config.currency}</code>\n🛠️ <b>Amministratore:</b> <code>${(target_user.admin) ? "Yes" : "No"}</code>\n\n📜 <b>Dati Database</b>\n<b>➕ Data inserimento:</b> <code>${target_user.created_at.toISOString()}</code>\n<b>🔄 Ultimo aggiornamento:</b>\n<code>${target_user.updated_at.toISOString()}</code>\n`, { parse_mode: 'HTML' });
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("Set Credit", `setcredit-${target_user.id}`), Markup.button.callback("Add Credit", `addcredit-${target_user.id}`), Markup.button.callback("Remove Credit", `rmcredit-${target_user.id}`)],

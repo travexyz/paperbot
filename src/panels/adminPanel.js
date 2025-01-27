@@ -1,11 +1,6 @@
-// File: include/actions/admin.js
-// Description: File contenente le azioni per la gestione admin nel bot
-// Date: 14/04/2024
-
 const { Markup } = require('telegraf');
-const client = require("../../src/client.js");
-const pool = require("../../src/db.js");
-const queries = require("../../src/queries.js");
+const client = require("../config/clientConfig");
+const queries = require("../config/database/dbQueries");
 
 const getUsername = async (user) => {
     let username;
@@ -50,7 +45,7 @@ const manageadmins = async (Context) => {
 
 const addadmin = async (Context) => {
 
-    const Users = await queries.getUsers()
+    const Users = await queries.getUsers(Context.from.id)
     const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
@@ -66,7 +61,7 @@ const addadmin = async (Context) => {
 
 const adminadd = async (Context) => {
 
-    const Users = await queries.getUsers()
+    const Users = await queries.getUsers(Context.from.id)
     const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
@@ -74,7 +69,7 @@ const adminadd = async (Context) => {
 }
 
 const rmadminconfirm = async (Context) => {
-    const Users = await queries.getUsers()
+    const Users = await queries.getUsers(Context.from.id)
     const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return
@@ -94,7 +89,7 @@ const rmadminconfirm = async (Context) => {
 }
 
 const adminrm = async (Context) => {
-    const Users = await queries.getUsers()
+    const Users = await queries.getUsers(Context.from.id)
     const user = Users.find(user => user.telegramID === Context.chat.id)
     if (user.banned) return
     if (!user.admin) return

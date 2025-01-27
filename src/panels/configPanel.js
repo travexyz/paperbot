@@ -1,9 +1,5 @@
-// File: include/actions/config.js
-// Desc: Azioni per la configurazione del bot + broadcast
-// Data: 15/04/2024
 const { Markup } = require('telegraf');
-const pool = require("../../src/db.js");
-const queries = require("../../src/queries.js");
+const queries = require("../config/database/dbQueries");
 
 const broadcast = async (Context) => {
     const Users = await queries.getUsers(Context.from.username);

@@ -1,15 +1,9 @@
-// File: include/actions/motd.js
-// Desc: Azioni per il message of the day
-// Data: 15/04/2024
-
 const { Markup } = require('telegraf');
-const pool = require("../../src/db.js");
-const queries = require("../../src/queries.js");
-
-const debug = true // DA AGGIORNARE
+const pool = require("../config/database/dbConfig");
+const queries = require("../config/database/dbQueries");
 
 const motd = async (Context) => {
-    const Users = await queries.getUsers();
+    const Users = await queries.getUsers(Context.from.id);
     const user = Users.find(user => user.telegramID === Context.chat.id);
     if (user.banned) return;
     if (!user.admin) return;
@@ -25,7 +19,7 @@ const motd = async (Context) => {
 }
 
 const editmotd = async (Context) => {
-    const Users = await queries.getUsers();
+    const Users = await queries.getUsers(Context.from.id);
     const user = Users.find(user => user.telegramID === Context.chat.id);
     if (user.banned) return;
     if (!user.admin) return;
@@ -33,7 +27,7 @@ const editmotd = async (Context) => {
 }
 
 const rmmotd = async (Context) => {
-    const Users = await queries.getUsers();
+    const Users = await queries.getUsers(Context.from.id);
     const user = Users.find(user => user.telegramID === Context.chat.id);
     if (user.banned) return;
     if (!user.admin) return;
@@ -47,7 +41,7 @@ const rmmotd = async (Context) => {
 }
 
 const motdrm = async (Context) => {
-    const Users = await queries.getUsers();
+    const Users = await queries.getUsers(Context.from.id);
     const user = Users.find(user => user.telegramID === Context.chat.id);
     if (user.banned) return;
     if (!user.admin) return;

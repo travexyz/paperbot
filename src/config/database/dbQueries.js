@@ -1,16 +1,15 @@
-const logger = require("./logger");
-const pool = require("./db");
-const client = require("./client");
+const logger = require("../pinoConfig");
+const client = require("../clientConfig");
+const pool = require("./dbConfig");
 
 async function getConfig(author) {
     let config;
     try {
         [config] = await pool.query("SELECT * FROM config");
+        logger.debug(`Successfully executed database query in getConfig triggered by ${author}`);
     } catch (err) {
-        logger.error(err, `Unknown error performing query in getConfig by ${author}`);
+        logger.error(err, `Unknown error performing query in getConfig triggered by ${author}`);
         throw err;
-    } finally {
-        logger.debug(`Successfully executed database query in getConfig by ${author}`);
     }
     return config[0];
 }
@@ -19,11 +18,10 @@ async function getProducts(author) {
     let products;
     try {
         [products] = await pool.query("SELECT * FROM products");
+        logger.debug(`Successfully executed database query in getProducts triggered by ${author}`);
     } catch (err) {
-        logger.error(err, `Unknown error performing query in getProducts by ${author}`);
+        logger.error(err, `Unknown error performing query in getProducts triggered by ${author}`);
         throw err;
-    } finally {
-        logger.debug(`Successfully executed database query in getProducts by ${author}`);
     }
     return products;
 }
@@ -32,11 +30,10 @@ async function getUsers(author) {
     let users;
     try {
         [users] = await pool.query("SELECT * FROM users");
+        logger.debug(`Successfully executed database query in getUsers triggered by ${author}`);
     } catch (err) {
-        logger.error(err, `Unknown error performing query in getUsers by ${author}`);
+        logger.error(err, `Unknown error performing query in getUsers triggered by ${author}`);
         throw err;
-    } finally {
-        logger.debug(`Successfully executed database query in getUsers by ${author}`);
     }
     return users;
 }
@@ -45,6 +42,7 @@ async function getUserById(id, author) {
     let results;
     try {
         [results] = await pool.query(`SELECT * FROM users WHERE id=?`, [id]);
+        logger.debug(`Successfully executed database query in getUserById by ${author}`);
     } catch (err) {
         logger.error(err, `Unknown error performing query in getUserById by ${author}`);
         throw err;
@@ -56,11 +54,10 @@ async function initializeUser(userId) {
     try {
         await pool.query(`INSERT INTO users (telegramID, balance, admin, banned, pisello)
                           VALUES (?, 0.00, 0, 0, ${Math.floor(Math.random() * 20)})`, [userId]);
+        logger.info(`New user added to db userId=${userId}`);
     } catch (err) {
         logger.error(err, `Unknown error performing query in initializeUser`);
         throw err;
-    } finally {
-        logger.info(`New user added to db userId=${userId}`);
     }
 }
 
@@ -222,6 +219,7 @@ async function removeUserCredit(userId, removedCredit, author) {
 async function banUser(id, author) {
     try {
         await pool.query(`UPDATE users SET banned=TRUE WHERE id=?`, [id]);
+        logger.warn(`User banned by ${author}: banned user id: ${id}`);
     } catch (err) {
         logger.error(err, `Unknown error performing query in banUser by ${author}`);
         throw err;
@@ -234,7 +232,7 @@ async function broadcastMessage(message, author) {
         for (const user of users) {
             client.telegram.sendMessage(user.telegramID, message);
         }
-        logger.info(`Broadcasted message by ${author}: message="${message}"`);
+        logger.warn(`Broadcasted message by ${author}: message="${message}"`);
     } catch (err) {
         logger.error(err, `Unknown error performing query in broadcastMessage by ${author}`);
         throw err;
@@ -254,6 +252,7 @@ async function updateCurrency(newCurrency, author) {
 const getProductById = async (id) => {
     try {
         const [product] = await pool.query('SELECT * FROM products WHERE id = ?', [id]);
+        logger.debug(`Successfully executed database query in getProductById by ${author}`);
         return product[0]
     } catch (error) {
         logger.error(err, `Unknown error performing query in getProductById by ${author}`);
