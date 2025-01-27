@@ -1,15 +1,15 @@
-const { Markup } = require('telegraf');
+const {Markup} = require('telegraf');
 const pool = require("../config/database/dbConfig");
 const queries = require("../config/database/dbQueries");
 
 const motd = async (Context) => {
-    const Users = await queries.getUsers(Context.from.id);
-    const user = Users.find(user => user.telegramID === Context.chat.id);
+    const user = await queries.getUserByTelegramId(Context.from.id);
     if (user.banned) return;
     if (!user.admin) return;
-    const Config = (await pool.query(`SELECT * FROM config`))[0][0];
-    await Context.editMessageText(`Il Messaggio del Giorno corrente è: <code>${Config.motd}</code>`, { parse_mode: 'HTML' });
 
+    const Config = queries.getConfig()
+
+    await Context.editMessageText(`Il Messaggio del Giorno corrente è: <code>${Config.motd}</code>`, {parse_mode: 'HTML'});
     await Context.editMessageReplyMarkup({
         inline_keyboard: [
             [Markup.button.callback("Cambia", "editmotd"), Markup.button.callback("Rimuovi", "rmmotd")],
@@ -19,19 +19,19 @@ const motd = async (Context) => {
 }
 
 const editmotd = async (Context) => {
-    const Users = await queries.getUsers(Context.from.id);
-    const user = Users.find(user => user.telegramID === Context.chat.id);
+    const user = await queries.getUserByTelegramId(Context.from.id);
     if (user.banned) return;
     if (!user.admin) return;
+
     await Context.scene.enter("editmotd");
 }
 
 const rmmotd = async (Context) => {
-    const Users = await queries.getUsers(Context.from.id);
-    const user = Users.find(user => user.telegramID === Context.chat.id);
+    const user = await queries.getUserByTelegramId(Context.from.id);
     if (user.banned) return;
     if (!user.admin) return;
-    await Context.editMessageText(`<b>Sei sicuro di voler rimuovere il Messaggio del Giorno corrente?</b>`, { parse_mode: 'HTML' });
+
+    await Context.editMessageText(`<b>Sei sicuro di voler rimuovere il Messaggio del Giorno corrente?</b>`, {parse_mode: 'HTML'});
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("✅", `motdrm`), Markup.button.callback("❌", "motd")]
@@ -41,14 +41,15 @@ const rmmotd = async (Context) => {
 }
 
 const motdrm = async (Context) => {
-    const Users = await queries.getUsers(Context.from.id);
-    const user = Users.find(user => user.telegramID === Context.chat.id);
+    const user = await queries.getUserByTelegramId(Context.from.id);
     if (user.banned) return;
     if (!user.admin) return;
-    
-    await pool.query(`UPDATE config SET motd=NULL`);
 
-    await Context.editMessageText(`<b>MOTD rimosso!</b>`, { parse_mode: 'HTML' });
+    await pool.query(`UPDATE config
+                      SET motd=NULL`);
+    // logger warn missing
+
+    await Context.editMessageText(`<b>MOTD rimosso!</b>`, {parse_mode: 'HTML'});
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("↩️ Indietro", "motd")]
@@ -57,4 +58,4 @@ const motdrm = async (Context) => {
     await Context.editMessageReplyMarkup(markup);
 }
 
-module.exports = { motd, editmotd, rmmotd, motdrm }
+module.exports = {motd, editmotd, rmmotd, motdrm}

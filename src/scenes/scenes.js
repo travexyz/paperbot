@@ -184,14 +184,18 @@ const editShopNameScene = new Scenes.WizardScene(
 const setCreditScene = new Scenes.WizardScene(
     'setcredit',
     async (Context) => {
+
         const Users = await queries.getUsers(Context.from.id);
         var user = Users.find(user => user.id === parseInt(Context.session.__scenes.state.id));
+
         var username;
         await client.telegram.getChat(user.telegramID)
             .then(chat => username = chat.username);
 
         Context.reply(`Inserisci il credito da impostare all'utente ${username} ID: ${user.telegramID} ("cancel" per annullare):`);
+
         return Context.wizard.next();
+
     }, async (Context) => {
         if (Context.message.text === "cancel") {
             Context.reply("Operazione annullata.");
@@ -282,7 +286,7 @@ const broadcastScene = new Scenes.WizardScene(
         } catch (err) {
             Context.reply("Errore nell'invio del messaggio.");
         } finally {
-            await Context.reply("Messaggio mandato! Dovresti vederlo anche te qua sopra.");
+            await Context.reply("Messaggio mandato! Dovresti vederlo anche te.");
         }
         return Context.scene.leave();
     }

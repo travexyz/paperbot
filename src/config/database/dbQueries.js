@@ -2,51 +2,75 @@ const logger = require("../pinoConfig");
 const client = require("../clientConfig");
 const pool = require("./dbConfig");
 
-async function getConfig(author) {
+async function getConfig() {
     let config;
     try {
         [config] = await pool.query("SELECT * FROM config");
-        logger.debug(`Successfully executed database query in getConfig triggered by ${author}`);
+        logger.debug(`Successfully executed database query in getConfig`);
     } catch (err) {
-        logger.error(err, `Unknown error performing query in getConfig triggered by ${author}`);
+        logger.error(err, `Unknown error performing query in getConfig`);
         throw err;
     }
     return config[0];
 }
 
-async function getProducts(author) {
+async function getProducts() {
     let products;
     try {
         [products] = await pool.query("SELECT * FROM products");
-        logger.debug(`Successfully executed database query in getProducts triggered by ${author}`);
+        logger.debug(`Successfully executed database query in getProducts`);
     } catch (err) {
-        logger.error(err, `Unknown error performing query in getProducts triggered by ${author}`);
+        logger.error(err, `Unknown error performing query in getProducts`);
         throw err;
     }
     return products;
 }
 
-async function getUsers(author) {
+async function getUsers() {
     let users;
     try {
         [users] = await pool.query("SELECT * FROM users");
-        logger.debug(`Successfully executed database query in getUsers triggered by ${author}`);
+        logger.debug(`Successfully executed database query in getUsers`);
     } catch (err) {
-        logger.error(err, `Unknown error performing query in getUsers triggered by ${author}`);
+        logger.error(err, `Unknown error performing query in getUsers`);
         throw err;
     }
     return users;
 }
 
-async function getUserById(id, author) {
+async function getUserById(id) {
     let results;
     try {
         [results] = await pool.query(`SELECT * FROM users WHERE id=?`, [id]);
-        logger.debug(`Successfully executed database query in getUserById by ${author}`);
+        logger.debug(`Successfully executed database query in getUserById`);
     } catch (err) {
-        logger.error(err, `Unknown error performing query in getUserById by ${author}`);
+        logger.error(err, `Unknown error performing query in getUserById`);
         throw err;
     }
+
+    if (results.length === 0) {
+        logger.error(`No user found with ID: ${id}`);
+        return null;
+    }
+
+    return results[0];
+}
+
+async function getUserByTelegramId(id) {
+    let results;
+    try {
+        [results] = await pool.query(`SELECT * FROM users WHERE telegramID=?`, [id]);
+        logger.debug(`Successfully executed database query in getUserByTelegramId`);
+    } catch (err) {
+        logger.error(err, `Unknown error performing query in getUserByTelegramId`);
+        throw err;
+    }
+
+    if (results.length === 0) {
+        logger.error(`No user found with ID: ${id}`);
+        return null;
+    }
+
     return results[0];
 }
 
@@ -226,6 +250,16 @@ async function banUser(id, author) {
     }
 }
 
+async function unbanUser(id, author) {
+    try {
+        await pool.query(`UPDATE users SET banned=FALSE WHERE id=?`, [id]);
+        logger.warn(`User un-banned by ${author}: un-banned user id: ${id}`);
+    } catch (err) {
+        logger.error(err, `Unknown error performing query in unbanUser by ${author}`);
+        throw err;
+    }
+}
+
 async function broadcastMessage(message, author) {
     try {
         const [users] = await pool.query(`SELECT telegramID FROM users`);
@@ -249,7 +283,7 @@ async function updateCurrency(newCurrency, author) {
     }
 }
 
-const getProductById = async (id) => {
+async function getProductById(id) {
     try {
         const [product] = await pool.query('SELECT * FROM products WHERE id = ?', [id]);
         logger.debug(`Successfully executed database query in getProductById by ${author}`);
@@ -265,6 +299,7 @@ module.exports = {
     getProducts,
     getUsers,
     getUserById,
+    getUserByTelegramId,
     initializeUser,
     addProduct,
     updateProductName,
@@ -280,8 +315,8 @@ module.exports = {
     addUserCredit,
     removeUserCredit,
     banUser,
+    unbanUser,
     broadcastMessage,
     updateCurrency,
-    getProductById,
-    getUserById
+    getProductById
 };

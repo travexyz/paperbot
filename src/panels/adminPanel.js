@@ -1,39 +1,27 @@
-const { Markup } = require('telegraf');
-const client = require("../config/clientConfig");
+const {Markup} = require('telegraf');
 const queries = require("../config/database/dbQueries");
-
-const getUsername = async (user) => {
-    let username;
-    await client.telegram.getChat(user.telegramID)
-        .then(chat => {
-            if (!chat.username) {
-                username = chat.first_name + " " + ((chat.last_name) ? chat.last_name : "(no username)");
-            } else {
-                username = chat.username;
-            }
-        });
-    return username;
-}
+const {getUsername} = require('./userPanel')
 
 const manageadmins = async (Context) => {
-    const Users = await queries.getUsers(Context.from.username);
-    const user = Users.find(user => user.telegramID === Context.chat.id)
+    const user = await queries.getUserByTelegramId(Context.from.id);
     if (user.banned) return
     if (!user.admin) return
 
+    const databaseUsers = await queries.getUsers();
+
     let message = "<b>👥 Lista amministratori:</b>\n"
-    for (const user of Users) {
+    for (const user of databaseUsers) {
         let username = await getUsername(user);
         message += `- <code>${username} (${user.telegramID})</code>\n`;
     }
 
     message += "\n<b>‼️ Seleziona un amministratore per gestirlo:</b>"
-    await Context.editMessageText(message, { parse_mode: 'HTML' })
+    await Context.editMessageText(message, {parse_mode: 'HTML'})
 
     let keyboard = {
         inline_keyboard: []
     }
-    for (const user of Users) {
+    for (const user of databaseUsers) {
         let username = await getUsername(user);
         keyboard.inline_keyboard.push([Markup.button.callback(username, `manageuser-${user.id}`)])
     }
@@ -44,13 +32,11 @@ const manageadmins = async (Context) => {
 }
 
 const addadmin = async (Context) => {
-
-    const Users = await queries.getUsers(Context.from.id)
-    const user = Users.find(user => user.telegramID === Context.chat.id)
+    const user = await queries.getUserByTelegramId(Context.from.id);
     if (user.banned) return
     if (!user.admin) return
 
-    await Context.editMessageText(`<b>Sei sicuro di voler aggiungere un nuovo amministratore?</b>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`<b>Sei sicuro di voler aggiungere un nuovo amministratore?</b>`, {parse_mode: 'HTML'})
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("✅", `adminadd`), Markup.button.callback("❌", "panel")]
@@ -60,17 +46,15 @@ const addadmin = async (Context) => {
 }
 
 const adminadd = async (Context) => {
-
-    const Users = await queries.getUsers(Context.from.id)
-    const user = Users.find(user => user.telegramID === Context.chat.id)
+    const user = await queries.getUserByTelegramId(Context.from.id);
     if (user.banned) return
     if (!user.admin) return
+
     await Context.scene.enter("addadmin")
 }
 
 const rmadminconfirm = async (Context) => {
-    const Users = await queries.getUsers(Context.from.id)
-    const user = Users.find(user => user.telegramID === Context.chat.id)
+    const user = await queries.getUserByTelegramId(Context.from.id);
     if (user.banned) return
     if (!user.admin) return
 
@@ -79,7 +63,7 @@ const rmadminconfirm = async (Context) => {
 
     let username = await getUsername(target_user);
 
-    await Context.editMessageText(`<b>Sei sicuro che vuoi rimuovere <code>${username} (${target_user.telegramID})</code> dagli amministratori?</b>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`<b>Sei sicuro che vuoi rimuovere <code>${username} (${target_user.telegramID})</code> dagli amministratori?</b>`, {parse_mode: 'HTML'})
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("✅", `adminrm-${target_user.id}`), Markup.button.callback("❌", `manageuser-${target_user.id}`)]
@@ -89,16 +73,14 @@ const rmadminconfirm = async (Context) => {
 }
 
 const adminrm = async (Context) => {
-    const Users = await queries.getUsers(Context.from.id)
-    const user = Users.find(user => user.telegramID === Context.chat.id)
+    const user = await queries.getUserByTelegramId(Context.from.id);
     if (user.banned) return
     if (!user.admin) return
 
     let id = Context.match[0].split("-")[1]
+    await queries.removeAdmin(id, Context.from.id)
 
-    await queries.removeAdmin(id)
-
-    await Context.editMessageText(`<b>Utente rimosso dalla lista degli amministratori!</b>`, { parse_mode: 'HTML' })
+    await Context.editMessageText(`<b>Utente rimosso dalla lista degli amministratori!</b>`, {parse_mode: 'HTML'})
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("↩️ Indietro", "rmadmin")]
@@ -107,4 +89,4 @@ const adminrm = async (Context) => {
     await Context.editMessageReplyMarkup(markup)
 }
 
-module.exports = { manageadmins, addadmin, adminadd, rmadminconfirm, adminrm }
+module.exports = {manageadmins, addadmin, adminadd, rmadminconfirm, adminrm}
