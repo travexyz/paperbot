@@ -1,29 +1,30 @@
-# Shopbot per Telegram
--  Creato con la libreria telegraf.js in node.js
--  Utilizza MySQL per gestire gli utenti e i prodotti
--  Con pannello amministratori per aggiornare il database direttamente dal bot
--  Codice sorgente chiaro e facile da ritoccare
-  
-## Configurazione
-1. Clona la repository localmente
-2. Utilizza un database con tabelle `users`, `products` e `config` strutturate come mostrato [qua sotto](#struttura-database)
-3. Crea un file `.env` impostato come il seguente:
-> ```
-> TOKEN=<token del bot>
-> DBHOST=<indirizzo del db>
-> DBUSER=<username per il db>
-> DBPWD=<password per il db>
-> DBNAME=<nome del db>
-> LOG_LEVEL=<livello di log>
-> ```
-4. Installa le dipendenze con `npm install`
-5. Esegui con `npm start` o `npm start pretty` per log più leggibili
+# Paperbot
+Semplice shop-bot per Telegram.
+- Gestione dinamica prodotti e utenti.
+- Completo pannello amministrativo in-line.
+- Database MySQL con queries asincrone.
 
-## Struttura database
-![img.png](images/tables.png)
-### Tabella utenti
-![users.png](./images/users.png)
-### Tabella prodotti
-![products.png](./images/products.png)
-### Tabella configurazione
-![config.png](./images/config.png)
+### Pannello principale
+![main](./images/main_panel.png)
+
+### Pannello dei prodotti
+![products](./images/products_panel.png)
+
+### Pannello per amministratori
+![main](./images/admin_panel.png)
+
+## Configurazione
+1. Clona la repository.
+2. Utilizza gli [script](./scripts) per creare un database MySQL.
+> [!NOTE]
+> Per eseguire gli script: entra su mysql crea un database `CREATE DATABASE mydatabase`,
+3. Crea nella root della repo un file `.env` strutturato cosi:
+```
+TOKEN=<token da BotFather>
+DBHOST=<indirizzo database>
+DBUSER=<username databse>
+DBPWD=<password database>
+DBNAME=<nome del database>
+```
+4. Installa le dipendenze con `npm install`.
+5. Esegui l'app con `npm start` o `npm start pretty`.
