@@ -17,7 +17,7 @@ Semplice shop-bot per Telegram.
 1. Clona la repository.
 2. Utilizza gli [script](./scripts) per creare un database MySQL.
 > [!NOTE]
-> Per eseguire gli script: entra su mysql crea un database `CREATE DATABASE mydatabase`,
+> Puoi usare il comando `source <persorso allo script>` nel terminale mysql del tuo database.
 3. Crea nella root della repo un file `.env` strutturato cosi:
 ```
 TOKEN=<token da BotFather>
