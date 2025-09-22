@@ -5,7 +5,7 @@ USE paperbot;
 CREATE TABLE IF NOT EXISTS `products` (
     `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,              -- ID prodotto, chiave primaria, auto incremento
     `name` VARCHAR(255) NOT NULL,                              -- Nome prodotto, non nullo
-    `price` TINYINT NOT NULL,                                  -- Prezzo, non nullo
+    `price` INT NOT NULL,                                  -- Prezzo, non nullo
     `stock` INT NOT NULL DEFAULT 0,                            -- Quantità in stock, valore di default 0
     `visible` BOOLEAN NOT NULL DEFAULT TRUE,                   -- Visibilità del prodotto, valore di default true
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,          -- Data di creazione, valore di default corrente

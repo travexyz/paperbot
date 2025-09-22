@@ -3,7 +3,7 @@ const helpers = require("../helpers")
 const queries = require("../config/database/dbQueries");
 
 const broadcast = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     await Context.editMessageText(`<b>Sei sicuro di voler mandare un messaggio a tutti gli utenti e admin del bot?</b>`, {parse_mode: 'HTML'});
     let markup = {
@@ -16,13 +16,13 @@ const broadcast = async (Context) => {
 }
 
 const dobroadcast = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     await Context.scene.enter("broadcast");
 }
 
 const config = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     const config = await queries.getConfig(Context.from.id);
 
@@ -38,13 +38,13 @@ const config = async (Context) => {
 }
 
 const editshopname = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     await Context.scene.enter("editshopname");
 }
 
 const currency = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     const config = await queries.getConfig();
     await Context.editMessageText(`La valuta corrente è: <code>${config.currency}</code>\nChe valuta vuoi usare?`, {parse_mode: 'HTML'});
@@ -58,7 +58,7 @@ const currency = async (Context) => {
 }
 
 const euro = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
     await queries.updateCurrency('€', Context.from.username);
 
     await Context.editMessageText(`<b>Valuta impostata ad euro €!</b>`, {parse_mode: 'HTML'});
@@ -71,7 +71,7 @@ const euro = async (Context) => {
 }
 
 const dollar = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     await queries.updateCurrency('$', Context.from.username);
 
@@ -85,7 +85,7 @@ const dollar = async (Context) => {
 }
 
 const yen = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     await queries.updateCurrency('¥', Context.from.username);
 
@@ -99,7 +99,7 @@ const yen = async (Context) => {
 }
 
 const pound = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     await queries.updateCurrency('£', Context.from.username);
 

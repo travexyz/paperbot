@@ -3,13 +3,13 @@ const helpers = require("../helpers")
 const queries = require("../config/database/dbQueries");
 
 const addproduct = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     await Context.scene.enter("addproduct")
 }
 
 const rmproduct = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     await Context.editMessageText(`<b>Seleziona il prodotto che vuoi rimuovere:</b>`, {parse_mode: 'HTML'})
 
@@ -28,7 +28,7 @@ const rmproduct = async (Context) => {
 }
 
 const rmproductconfirm = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     let id = Context.match[0].split("-")[1]
     var product = await queries.getProductById(id)
@@ -43,7 +43,7 @@ const rmproductconfirm = async (Context) => {
 }
 
 const productrm = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     let id = Context.match[0].split("-")[1]
     await queries.deleteProduct(id, Context.from.username)
@@ -58,7 +58,7 @@ const productrm = async (Context) => {
 }
 
 const editproduct = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     await Context.editMessageText(`<b>Seleziona il prodotto che vuoi modificare:</b>`, {parse_mode: 'HTML'})
     let keyboard = []
@@ -76,7 +76,7 @@ const editproduct = async (Context) => {
 }
 
 const editproductconfirm = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     let id = Context.match[0].split("-")[1]
     var product = await queries.getProductById(id)
@@ -95,7 +95,7 @@ const editproductconfirm = async (Context) => {
 }
 
 const changename = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     let id = Context.match[0].split("-")[1]
 
@@ -103,7 +103,7 @@ const changename = async (Context) => {
 }
 
 const changeprice = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     let id = Context.match[0].split("-")[1]
 
@@ -111,7 +111,7 @@ const changeprice = async (Context) => {
 }
 
 const changestock = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     let id = Context.match[0].split("-")[1]
 
@@ -119,7 +119,7 @@ const changestock = async (Context) => {
 }
 
 const changevis = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     let id = Context.match[0].split("-")[1]
     var product = await queries.getProductById(id);
@@ -135,7 +135,7 @@ const changevis = async (Context) => {
 }
 
 const hide = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     let id = Context.match[0].split("-")[1]
     await queries.updateProductVisibility(id, false, Context.from.username)
@@ -151,7 +151,7 @@ const hide = async (Context) => {
 }
 
 const show = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     let id = Context.match[0].split("-")[1]
     await queries.updateProductVisibility(id, true, Context.from.username)

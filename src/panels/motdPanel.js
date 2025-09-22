@@ -4,7 +4,7 @@ const helpers = require("../helpers")
 const queries = require("../config/database/dbQueries");
 
 const motd = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     const Config = queries.getConfig()
 
@@ -18,13 +18,13 @@ const motd = async (Context) => {
 }
 
 const editmotd = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     await Context.scene.enter("editmotd");
 }
 
 const rmmotd = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     await Context.editMessageText(`<b>Sei sicuro di voler rimuovere il Messaggio del Giorno corrente?</b>`, {parse_mode: 'HTML'});
     let markup = {
@@ -36,7 +36,7 @@ const rmmotd = async (Context) => {
 }
 
 const motdrm = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     await pool.query(`UPDATE config
                       SET motd=NULL`);

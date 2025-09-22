@@ -3,8 +3,9 @@ const helpers = require("../helpers")
 const queries = require('../config/database/dbQueries');
 
 const start = async (Context) => {
-    if (!helpers.isBanned) return
-
+    if (!await helpers.hasUserAccess(Context)) return
+    
+    const user = await queries.getUserByTelegramId(Context.from.id);
     if (!user) {
         await queries.initializeUser(Context.chat.id);
     } else if (user.banned) return;
@@ -18,7 +19,7 @@ const start = async (Context) => {
 };
 
 const main = async (Context) => {
-    if (!helpers.isBanned) return
+    if (!await helpers.hasUserAccess(Context)) return
 
     const config = await queries.getConfig(Context.from.id);
 
@@ -31,15 +32,16 @@ const main = async (Context) => {
         ],
     }
 
-    if (user.admin)
+    if (await await helpers.hasAdministratorAccess(Context))
         keyboard.inline_keyboard.push([Markup.button.callback("🛠️ Pannello Amministratori", "panel")])
 
     await Context.editMessageReplyMarkup(keyboard);
 };
 
 const products = async (Context) => {
-    if (!helpers.isBanned) return
+    if (!await helpers.hasUserAccess(Context)) return
 
+    const user = await queries.getUserByTelegramId(Context.from.id);
     const config = await queries.getConfig(Context.from.id);
 
     let message = `📚 <b>Prodotti di ${config.shopname}\n</b>💰 <b>Grana:</b> <code>${user.balance}${config.currency}</code>\n\n`;
@@ -68,10 +70,12 @@ const products = async (Context) => {
 };
 
 const account = async (Context) => {
-    if (!helpers.isBanned) return
+    if (!await helpers.hasUserAccess(Context)) return
+
+    const user = await queries.getUserByTelegramId(Context.from.id);
 
     const config = await queries.getConfig(Context.from.id);
-    await Context.editMessageText(`${(user.admin) ? "🔱 <b>Amministratore</b>\n" : ""}👤 <b>Username</b> <code>${Context.chat.username}</code>
+    await Context.editMessageText(`${(user.admin) ? "🔱 <b>Amministratore</b>\n" : ""}👤 <b>Username</b> <code>${(Context.chat.username) ? Context.from.username : "N/A"}</code>
 🆔 <b>ID:</b> <code>${Context.chat.id}</code>
 💵 <b>Grana:</b> <code>${user.balance}${config.currency}</code>
 📏 <b>Pisello:</b> <code>${user.pisello}cm ${(user.pisello > 10) ? "😱" : "😮‍💨"}</code>`, {parse_mode: 'HTML'});
@@ -84,9 +88,9 @@ const account = async (Context) => {
 };
 
 const info = async (Context) => {
-    if (!helpers.isBanned) return
+    if (!await helpers.hasUserAccess(Context)) return
 
-    await Context.editMessageText("*🤖 Creato da ||travexyz|| con tanto ||❤️|| in nodejs*", {parse_mode: 'MarkdownV2'});
+    await Context.editMessageText("*🤖 Creato da ||travexyz|| con ||❤️||*", {parse_mode: 'MarkdownV2'});
     await Context.editMessageReplyMarkup({
         inline_keyboard: [
             [Markup.button.url("Contatta Sviluppatore", "tg://user?id=304506948")],
@@ -96,7 +100,7 @@ const info = async (Context) => {
 };
 
 const panel = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     await Context.editMessageText(`<b>🛠️ Pannello Amministratori</b>`, {parse_mode: 'HTML'});
     let markup = {

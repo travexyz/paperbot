@@ -4,7 +4,7 @@ const helpers = require("../helpers")
 const {getUsername} = require('./userPanel')
 
 const manageadmins = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     const databaseUsers = await queries.getUsers();
 
@@ -31,7 +31,7 @@ const manageadmins = async (Context) => {
 }
 
 const addadmin = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     await Context.editMessageText(`<b>Sei sicuro di voler aggiungere un nuovo amministratore?</b>`, {parse_mode: 'HTML'})
     let markup = {
@@ -43,13 +43,13 @@ const addadmin = async (Context) => {
 }
 
 const adminadd = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     await Context.scene.enter("addadmin")
 }
 
 const rmadminconfirm = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     let id = Context.match[0].split("-")[1]
     const target_user = await queries.getUserById(id, Context.from.username)
@@ -66,7 +66,7 @@ const rmadminconfirm = async (Context) => {
 }
 
 const adminrm = async (Context) => {
-    if (!helpers.hasPassedAdminChecks()) return;
+    if (!await helpers.hasAdministratorAccess(Context)) return;
 
     let id = Context.match[0].split("-")[1]
     await queries.removeAdmin(id, Context.from.id)
