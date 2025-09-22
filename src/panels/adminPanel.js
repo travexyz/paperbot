@@ -1,11 +1,10 @@
 const {Markup} = require('telegraf');
 const queries = require("../config/database/dbQueries");
+const helpers = require("../helpers")
 const {getUsername} = require('./userPanel')
 
 const manageadmins = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     const databaseUsers = await queries.getUsers();
 
@@ -32,9 +31,7 @@ const manageadmins = async (Context) => {
 }
 
 const addadmin = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     await Context.editMessageText(`<b>Sei sicuro di voler aggiungere un nuovo amministratore?</b>`, {parse_mode: 'HTML'})
     let markup = {
@@ -46,17 +43,13 @@ const addadmin = async (Context) => {
 }
 
 const adminadd = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     await Context.scene.enter("addadmin")
 }
 
 const rmadminconfirm = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     let id = Context.match[0].split("-")[1]
     const target_user = await queries.getUserById(id, Context.from.username)
@@ -73,9 +66,7 @@ const rmadminconfirm = async (Context) => {
 }
 
 const adminrm = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     let id = Context.match[0].split("-")[1]
     await queries.removeAdmin(id, Context.from.id)

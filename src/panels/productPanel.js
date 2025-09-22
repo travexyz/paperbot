@@ -1,18 +1,15 @@
 const {Markup} = require('telegraf')
+const helpers = require("../helpers")
 const queries = require("../config/database/dbQueries");
 
 const addproduct = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     await Context.scene.enter("addproduct")
 }
 
 const rmproduct = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     await Context.editMessageText(`<b>Seleziona il prodotto che vuoi rimuovere:</b>`, {parse_mode: 'HTML'})
 
@@ -31,9 +28,7 @@ const rmproduct = async (Context) => {
 }
 
 const rmproductconfirm = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     let id = Context.match[0].split("-")[1]
     var product = await queries.getProductById(id)
@@ -48,9 +43,7 @@ const rmproductconfirm = async (Context) => {
 }
 
 const productrm = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     let id = Context.match[0].split("-")[1]
     await queries.deleteProduct(id, Context.from.username)
@@ -65,9 +58,7 @@ const productrm = async (Context) => {
 }
 
 const editproduct = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     await Context.editMessageText(`<b>Seleziona il prodotto che vuoi modificare:</b>`, {parse_mode: 'HTML'})
     let keyboard = []
@@ -85,9 +76,7 @@ const editproduct = async (Context) => {
 }
 
 const editproductconfirm = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     let id = Context.match[0].split("-")[1]
     var product = await queries.getProductById(id)
@@ -106,9 +95,7 @@ const editproductconfirm = async (Context) => {
 }
 
 const changename = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     let id = Context.match[0].split("-")[1]
 
@@ -116,9 +103,7 @@ const changename = async (Context) => {
 }
 
 const changeprice = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     let id = Context.match[0].split("-")[1]
 
@@ -126,9 +111,7 @@ const changeprice = async (Context) => {
 }
 
 const changestock = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     let id = Context.match[0].split("-")[1]
 
@@ -136,9 +119,7 @@ const changestock = async (Context) => {
 }
 
 const changevis = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     let id = Context.match[0].split("-")[1]
     var product = await queries.getProductById(id);
@@ -154,9 +135,7 @@ const changevis = async (Context) => {
 }
 
 const hide = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     let id = Context.match[0].split("-")[1]
     await queries.updateProductVisibility(id, false, Context.from.username)
@@ -172,9 +151,7 @@ const hide = async (Context) => {
 }
 
 const show = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     let id = Context.match[0].split("-")[1]
     await queries.updateProductVisibility(id, true, Context.from.username)

@@ -41,7 +41,7 @@ async function getUsers() {
 async function getUserById(id) {
     let results;
     try {
-        [results] = await pool.query(`SELECT * FROM users WHERE id=?`, [id]);
+        [results] = await pool.query(`SELECT * FROM users WHERE key=?`, [id]);
         logger.debug(`Successfully executed database query in getUserById`);
     } catch (err) {
         logger.error(err, `Unknown error performing query in getUserById`);
@@ -100,7 +100,7 @@ async function updateProductName(productId, newName, author) {
     try {
         await pool.query(`UPDATE products
                           SET name=?
-                          WHERE id = ?`, [newName, productId]);
+                          WHERE key=?`, [newName, productId]);
         logger.warn(`Product name changed by ${author}: newName=${newName}, productId=${productId}`);
     } catch (err) {
         logger.error(err, `Unknown error performing query in updateProductName by ${author}`);
@@ -112,7 +112,7 @@ async function updateProductPrice(productId, newPrice, author) {
     try {
         await pool.query(`UPDATE products
                           SET price=?
-                          WHERE id = ?`, [newPrice, productId]);
+                          WHERE key=?`, [newPrice, productId]);
         logger.warn(`Product price changed by ${author}: newPrice=${newPrice}, productId=${productId}`);
     } catch (err) {
         logger.error(err, `Unknown error performing query in updateProductPrice by ${author}`);
@@ -124,7 +124,7 @@ async function updateProductStock(productId, newStock, author) {
     try {
         await pool.query(`UPDATE products
                           SET stock=?
-                          WHERE id = ?`, [newStock, productId]);
+                          WHERE key=?`, [newStock, productId]);
         logger.warn(`Product stock changed by ${author}: newStock=${newStock}, productId=${productId}`);
     } catch (err) {
         logger.error(err, `Unknown error performing query in updateProductStock by ${author}`);
@@ -134,7 +134,7 @@ async function updateProductStock(productId, newStock, author) {
 
 async function deleteProduct(productId, author) {
     try {
-        await pool.query(`DELETE FROM products WHERE id=?`, [productId]);
+        await pool.query(`DELETE FROM products WHERE key=?`, [productId]);
         logger.warn(`Product deleted by ${author}: productId=${productId}`);
     } catch (err) {
         logger.error(err, `Unknown error performing query in deleteProduct by ${author}`);
@@ -144,7 +144,7 @@ async function deleteProduct(productId, author) {
 
 async function updateProductVisibility(productId, visibility, author) {
     try {
-        await pool.query(`UPDATE products SET visible=? WHERE id=?`, [visibility, productId]);
+        await pool.query(`UPDATE products SET visible=? WHERE key=?`, [visibility, productId]);
         logger.warn(`Product visibility updated by ${author}: productId=${productId}, visibility=${visibility}`);
     } catch (err) {
         logger.error(err, `Unknown error performing query in updateProductVisibility by ${author}`);
@@ -156,7 +156,7 @@ async function addAdmin(userId, author) {
     try {
         await pool.query(`UPDATE users
                           SET admin= TRUE
-                          WHERE id = ?`, [userId]);
+                          WHERE key=?`, [userId]);
         logger.warn(`User added as admin by ${author}: userId=${userId}`);
     } catch (err) {
         logger.error(err, `Unknown error performing query in addAdmin by ${author}`);
@@ -166,7 +166,7 @@ async function addAdmin(userId, author) {
 
 async function removeAdmin(userId, author) {
     try {
-        await pool.query(`UPDATE users SET admin=FALSE WHERE id=?`, [userId]);
+        await pool.query(`UPDATE users SET admin=FALSE WHERE key=?`, [userId]);
         logger.warn(`User removed from admin by ${author}: userId=${userId}`);
     } catch (err) {
         logger.error(err, `Unknown error performing query in removeAdmin by ${author}`);
@@ -200,7 +200,7 @@ async function setUserCredit(userId, newCredit, author) {
     try {
         await pool.query(`UPDATE users
                           SET balance=?
-                          WHERE id = ?`, [parseFloat(newCredit), userId]);
+                          WHERE key=?`, [parseFloat(newCredit), userId]);
         logger.warn(`User credit set by ${author}: newCredit=${parseFloat(newCredit)}, userId=${userId}`);
     } catch (err) {
         logger.error(err, `Unknown error performing query in setUserCredit by ${author}`);
@@ -212,11 +212,11 @@ async function addUserCredit(userId, addedCredit, author) {
     try {
         const [user] = await pool.query(`SELECT balance
                                          FROM users
-                                         WHERE id = ?`, [userId]);
+                                         WHERE key?`, [userId]);
         const newCredit = user[0].balance + parseFloat(addedCredit);
         await pool.query(`UPDATE users
                           SET balance=?
-                          WHERE id = ?`, [newCredit, userId]);
+                          WHERE key=?`, [newCredit, userId]);
         logger.warn(`User credit added by ${author}: addedCredit=${parseFloat(addedCredit)}, newCredit=${newCredit}, userId=${userId}`);
     } catch (err) {
         logger.error(err, `Unknown error performing query in addUserCredit by ${author}`);
@@ -228,11 +228,11 @@ async function removeUserCredit(userId, removedCredit, author) {
     try {
         const [user] = await pool.query(`SELECT balance
                                          FROM users
-                                         WHERE id = ?`, [userId]);
+                                         WHERE key=?`, [userId]);
         const newCredit = user[0].balance - parseFloat(removedCredit);
         await pool.query(`UPDATE users
                           SET balance=?
-                          WHERE id = ?`, [newCredit, userId]);
+                          WHERE key=?`, [newCredit, userId]);
         logger.warn(`User credit removed by ${author}: removedCredit=${parseFloat(removedCredit)}, newCredit=${newCredit}, userId=${userId}`);
     } catch (err) {
         logger.error(err, `Unknown error performing query in removeUserCredit by ${author}`);
@@ -242,7 +242,7 @@ async function removeUserCredit(userId, removedCredit, author) {
 
 async function banUser(id, author) {
     try {
-        await pool.query(`UPDATE users SET banned=TRUE WHERE id=?`, [id]);
+        await pool.query(`UPDATE users SET banned=TRUE WHERE key=?`, [id]);
         logger.warn(`User banned by ${author}: banned user id: ${id}`);
     } catch (err) {
         logger.error(err, `Unknown error performing query in banUser by ${author}`);
@@ -252,7 +252,7 @@ async function banUser(id, author) {
 
 async function unbanUser(id, author) {
     try {
-        await pool.query(`UPDATE users SET banned=FALSE WHERE id=?`, [id]);
+        await pool.query(`UPDATE users SET banned=FALSE WHERE key=?`, [id]);
         logger.warn(`User un-banned by ${author}: un-banned user id: ${id}`);
     } catch (err) {
         logger.error(err, `Unknown error performing query in unbanUser by ${author}`);
@@ -285,7 +285,7 @@ async function updateCurrency(newCurrency, author) {
 
 async function getProductById(id) {
     try {
-        const [product] = await pool.query('SELECT * FROM products WHERE id = ?', [id]);
+        const [product] = await pool.query('SELECT * FROM products WHERE key=?', [id]);
         logger.debug(`Successfully executed database query in getProductById by ${author}`);
         return product[0]
     } catch (error) {

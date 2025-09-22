@@ -1,10 +1,9 @@
 const {Markup} = require('telegraf');
+const helpers = require("../helpers")
 const queries = require("../config/database/dbQueries");
 
 const broadcast = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return;
-    if (!user.admin) return;
+    if (!helpers.hasPassedAdminChecks()) return;
 
     await Context.editMessageText(`<b>Sei sicuro di voler mandare un messaggio a tutti gli utenti e admin del bot?</b>`, {parse_mode: 'HTML'});
     let markup = {
@@ -17,17 +16,13 @@ const broadcast = async (Context) => {
 }
 
 const dobroadcast = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return;
-    if (!user.admin) return;
+    if (!helpers.hasPassedAdminChecks()) return;
 
     await Context.scene.enter("broadcast");
 }
 
 const config = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return;
-    if (!user.admin) return;
+    if (!helpers.hasPassedAdminChecks()) return;
 
     const config = await queries.getConfig(Context.from.id);
 
@@ -43,17 +38,13 @@ const config = async (Context) => {
 }
 
 const editshopname = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return;
-    if (!user.admin) return;
+    if (!helpers.hasPassedAdminChecks()) return;
 
     await Context.scene.enter("editshopname");
 }
 
 const currency = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return;
-    if (!user.admin) return;
+    if (!helpers.hasPassedAdminChecks()) return;
 
     const config = await queries.getConfig();
     await Context.editMessageText(`La valuta corrente è: <code>${config.currency}</code>\nChe valuta vuoi usare?`, {parse_mode: 'HTML'});
@@ -67,9 +58,7 @@ const currency = async (Context) => {
 }
 
 const euro = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return;
-    if (!user.admin) return;
+    if (!helpers.hasPassedAdminChecks()) return;
     await queries.updateCurrency('€', Context.from.username);
 
     await Context.editMessageText(`<b>Valuta impostata ad euro €!</b>`, {parse_mode: 'HTML'});
@@ -82,9 +71,7 @@ const euro = async (Context) => {
 }
 
 const dollar = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return;
-    if (!user.admin) return;
+    if (!helpers.hasPassedAdminChecks()) return;
 
     await queries.updateCurrency('$', Context.from.username);
 
@@ -98,9 +85,7 @@ const dollar = async (Context) => {
 }
 
 const yen = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return;
-    if (!user.admin) return;
+    if (!helpers.hasPassedAdminChecks()) return;
 
     await queries.updateCurrency('¥', Context.from.username);
 
@@ -114,9 +99,7 @@ const yen = async (Context) => {
 }
 
 const pound = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return;
-    if (!user.admin) return;
+    if (!helpers.hasPassedAdminChecks()) return;
 
     await queries.updateCurrency('£', Context.from.username);
 

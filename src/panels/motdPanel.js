@@ -1,11 +1,10 @@
 const {Markup} = require('telegraf');
 const pool = require("../config/database/dbConfig");
+const helpers = require("../helpers")
 const queries = require("../config/database/dbQueries");
 
 const motd = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return;
-    if (!user.admin) return;
+    if (!helpers.hasPassedAdminChecks()) return;
 
     const Config = queries.getConfig()
 
@@ -19,17 +18,13 @@ const motd = async (Context) => {
 }
 
 const editmotd = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return;
-    if (!user.admin) return;
+    if (!helpers.hasPassedAdminChecks()) return;
 
     await Context.scene.enter("editmotd");
 }
 
 const rmmotd = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return;
-    if (!user.admin) return;
+    if (!helpers.hasPassedAdminChecks()) return;
 
     await Context.editMessageText(`<b>Sei sicuro di voler rimuovere il Messaggio del Giorno corrente?</b>`, {parse_mode: 'HTML'});
     let markup = {
@@ -41,9 +36,7 @@ const rmmotd = async (Context) => {
 }
 
 const motdrm = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return;
-    if (!user.admin) return;
+    if (!helpers.hasPassedAdminChecks()) return;
 
     await pool.query(`UPDATE config
                       SET motd=NULL`);

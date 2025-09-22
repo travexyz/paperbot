@@ -1,5 +1,6 @@
 const {Markup} = require('telegraf');
 const client = require("../config/clientConfig");
+const helpers = require("../helpers")
 const queries = require("../config/database/dbQueries");
 
 const getUsername = async (user) => {
@@ -16,9 +17,7 @@ const getUsername = async (user) => {
 }
 
 const manageusers = async Context => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     const databaseUsers = await queries.getUsers();
 
@@ -46,9 +45,7 @@ const manageusers = async Context => {
 }
 
 const manageuser = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     const Config = await queries.getConfig(Context.from.username);
     const id = Context.match[0].split("-")[1];
@@ -69,36 +66,28 @@ const manageuser = async (Context) => {
 }
 
 const setcredit = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     let id = Context.match[0].split("-")[1]
     await Context.scene.enter("setcredit", {id: id})
 }
 
 const addcredit = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     let id = Context.match[0].split("-")[1]
     await Context.scene.enter("addcredit", {id: id})
 }
 
 const rmcredit = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     let id = Context.match[0].split("-")[1]
     await Context.scene.enter("rmcredit", {id: id})
 }
 
 const banuser = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     let id = Context.match[0].split("-")[1];
     const target_user = await queries.getUserById(id, Context.from.username);
@@ -116,9 +105,7 @@ const banuser = async (Context) => {
 }
 
 const userban = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     let id = Context.match[0].split("-")[1];
     await queries.banUser(id, Context.from.username);
@@ -134,9 +121,7 @@ const userban = async (Context) => {
 }
 
 const rmban = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     let id = Context.match[0].split("-")[1];
     const target_user = await queries.getUserById(id, Context.from.username);
@@ -154,9 +139,7 @@ const rmban = async (Context) => {
 }
 
 const banrm = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return
-    if (!user.admin) return
+    if (!helpers.hasPassedAdminChecks()) return;
 
     let id = Context.match[0].split("-")[1];
     await queries.unbanUser(id, Context.from.username);

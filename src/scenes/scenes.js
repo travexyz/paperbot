@@ -1,6 +1,9 @@
 const { Scenes } = require('telegraf');
 const client = require('../config/clientConfig');
+const helpers = require("../helpers")
 const queries = require('../config/database/dbQueries');
+
+// #PROBLEM01: the code on the "finally" part of the try-catch, should be put after the line where the action is taken (e.g. the query)
 
 const addProductScene = new Scenes.WizardScene(
     'addproduct',
@@ -27,14 +30,17 @@ const addProductScene = new Scenes.WizardScene(
         Context.reply("Vuoi nascondere o mostrare il prodotto nella lista? 0 nascondi, 1 mostra");
         return Context.wizard.next();
     }, async (Context) => {
-        Context.wizard.state.productInfo.visible = (Context.message.text === "1");
-        const { name, price, stock, visible } = Context.wizard.state.productInfo;
-        try {
-            await queries.addProduct(name, price, stock, visible, Context.from.username);
-        } catch (err) {
-            Context.reply("Errore nell'aggiunta del prodotto.");
-        } finally {
-            Context.reply('Prodotto aggiunto!');
+        if (helpers.hasPassedAdminChecks()) {
+            Context.wizard.state.productInfo.visible = (Context.message.text === "1");
+            const { name, price, stock, visible } = Context.wizard.state.productInfo;
+            // #PROBLEM01
+            try {
+                await queries.addProduct(name, price, stock, visible, Context.from.username);
+            } catch (err) {
+                Context.reply("Errore nell'aggiunta del prodotto.");
+            } finally {
+                Context.reply('Prodotto aggiunto!');
+            }
         }
         return Context.scene.leave();
     },
@@ -50,12 +56,15 @@ const editNameScene = new Scenes.WizardScene(
             Context.reply("Operazione annullata.");
             return Context.scene.leave();
         }
-        try {
-            await queries.updateProductName(Context.session.__scenes.state.productId, Context.message.text, Context.from.username);
-        } catch (err) {
-            Context.reply("Errore nella modifica del nome del prodotto.");
-        } finally {
-            Context.reply(`Modificato nome del prodotto in ${Context.message.text}`);
+        if (helpers.hasPassedAdminChecks()) {
+            // #PROBLEM01
+            try {
+                await queries.updateProductName(Context.session.__scenes.state.productId, Context.message.text, Context.from.username);
+            } catch (err) {
+                Context.reply("Errore nella modifica del nome del prodotto.");
+            } finally {
+                Context.reply(`Modificato nome del prodotto in ${Context.message.text}`);
+            }
         }
         return Context.scene.leave();
     },
@@ -71,12 +80,15 @@ const editPriceScene = new Scenes.WizardScene(
             Context.reply("Operazione annullata.");
             return Context.scene.leave();
         }
-        try {
-            await queries.updateProductPrice(Context.session.__scenes.state.productId, Context.message.text, Context.from.username);
-        } catch (err) {
-            Context.reply("Errore nella modifica del prezzo del prodotto.");
-        } finally {
-            Context.reply(`Modificato prezzo del prodotto in ${Context.message.text}`);
+        if (helpers.hasPassedAdminChecks()) {
+            // #PROBLEM01
+            try {
+                await queries.updateProductPrice(Context.session.__scenes.state.productId, Context.message.text, Context.from.username);
+            } catch (err) {
+                Context.reply("Errore nella modifica del prezzo del prodotto.");
+            } finally {
+                Context.reply(`Modificato prezzo del prodotto in ${Context.message.text}`);
+            }
         }
         return Context.scene.leave();
     },
@@ -92,12 +104,15 @@ const editStockScene = new Scenes.WizardScene(
             Context.reply("Operazione annullata.");
             return Context.scene.leave();
         }
-        try {
-            await queries.updateProductStock(Context.session.__scenes.state.productId, Context.message.text, Context.from.username);
-        } catch (err) {
-            Context.reply("Errore nella modifica della quantità del prodotto.");
-        } finally {
-            Context.reply(`Modificata quantità del prodotto in ${Context.message.text}`);
+        if (helpers.hasPassedAdminChecks()) {
+            // #PROBLEM01
+            try {
+                await queries.updateProductStock(Context.session.__scenes.state.productId, Context.message.text, Context.from.username);
+            } catch (err) {
+                Context.reply("Errore nella modifica della quantità del prodotto.");
+            } finally {
+                Context.reply(`Modificata quantità del prodotto in ${Context.message.text}`);
+            }
         }
         return Context.scene.leave();
     },
@@ -125,12 +140,15 @@ const addAdminScene = new Scenes.WizardScene(
         return Context.wizard.next();
     }, async (Context) => {
         if (Context.message.text === "1") {
-            try {
-                await queries.addAdmin(Context.wizard.state.id, Context.from.username);
-            } catch (err) {
-                Context.reply("Errore nell'aggiunta dell'amministratore.");
-            } finally {
-                Context.reply(`Utente aggiunto alla lista degli amministratori!`);
+            if (helpers.hasPassedAdminChecks()) {
+                // #PROBLEM01
+                try {
+                    await queries.addAdmin(Context.wizard.state.id, Context.from.username);
+                } catch (err) {
+                    Context.reply("Errore nell'aggiunta dell'amministratore.");
+                } finally {
+                    Context.reply(`Utente aggiunto alla lista degli amministratori!`);
+                }
             }
         } else {
             Context.reply('OK, utente non aggiunto!');
@@ -149,12 +167,15 @@ const editMotdScene = new Scenes.WizardScene(
             Context.reply("Operazione annullata.");
             return Context.scene.leave();
         }
-        try {
-            await queries.updateMotd(Context.message.text, Context.from.username);
-        } catch (err) {
-            Context.reply("Errore nella modifica del Messaggio del Giorno.");
-        } finally {
-            Context.reply(`Nuovo Messaggio del Giorno impostato!`);
+        if (helpers.hasPassedAdminChecks()) {
+            // #PROBLEM01
+            try {
+                await queries.updateMotd(Context.message.text, Context.from.username);
+            } catch (err) {
+                Context.reply("Errore nella modifica del Messaggio del Giorno.");
+            } finally {
+                Context.reply(`Nuovo Messaggio del Giorno impostato!`);
+            }
         }
         return Context.scene.leave();
     },
@@ -170,12 +191,15 @@ const editShopNameScene = new Scenes.WizardScene(
             Context.reply("Operazione annullata.");
             return Context.scene.leave();
         }
-        try {
-            await queries.updateShopName(Context.message.text, Context.from.username);
-        } catch (err) {
-            Context.reply("Errore nella modifica del nome dello shop.");
-        } finally {
-            Context.reply(`Nuovo nome shop impostato!`);
+        if (helpers.hasPassedAdminChecks()) {
+            // #PROBLEM01
+            try {
+                await queries.updateShopName(Context.message.text, Context.from.username);
+            } catch (err) {
+                Context.reply("Errore nella modifica del nome dello shop.");
+            } finally {
+                Context.reply(`Nuovo nome shop impostato!`);
+            }
         }
         return Context.scene.leave();
     },
@@ -202,12 +226,15 @@ const setCreditScene = new Scenes.WizardScene(
             return Context.scene.leave();
         }
         var credit = Context.message.text;
-        try {
-            await queries.setUserCredit(Context.session.__scenes.state.id, credit, Context.from.username);
-        } catch (err) {
-            Context.reply("Errore nell'impostare il credito.");
-        } finally {
-            Context.reply(`Credito dell'utente impostato a ${credit}`);
+        if (helpers.hasPassedAdminChecks()) {
+            // #PROBLEM01
+            try {
+                await queries.setUserCredit(Context.session.__scenes.state.id, credit, Context.from.username);
+            } catch (err) {
+                Context.reply("Errore nell'impostare il credito.");
+            } finally {
+                Context.reply(`Credito dell'utente impostato a ${credit}`);
+            }
         }
         return Context.scene.leave();
     }
@@ -229,14 +256,17 @@ const addCreditScene = new Scenes.WizardScene(
             Context.reply("Operazione annullata.");
             return Context.scene.leave();
         }
-        try {
-            await queries.addUserCredit(Context.session.__scenes.state.id, Context.message.text, Context.from.username);
-        } catch (err) {
-            Context.reply("Errore nell'aggiunta del credito.");
-        } finally {
-            const Users = await queries.getUsers(Context.from.id);
-            var user = Users.find(user => user.id == Context.session.__scenes.state.id);
-            Context.reply(`Credito dell'utente dopo l'aggiunta: ${user.balance}`);
+        if (helpers.hasPassedAdminChecks()) {
+            // #PROBLEM01
+            try {
+                await queries.addUserCredit(Context.session.__scenes.state.id, Context.message.text, Context.from.username);
+            } catch (err) {
+                Context.reply("Errore nell'aggiunta del credito.");
+            } finally {
+                const Users = await queries.getUsers(Context.from.id);
+                var user = Users.find(user => user.id == Context.session.__scenes.state.id);
+                Context.reply(`Credito dell'utente dopo l'aggiunta: ${user.balance}`);
+            }
         }
         return Context.scene.leave();
     }
@@ -258,14 +288,17 @@ const rmCreditScene = new Scenes.WizardScene(
             Context.reply("Operazione annullata.");
             return Context.scene.leave();
         }
-        try {
-            await queries.removeUserCredit(Context.session.__scenes.state.id, Context.message.text, Context.from.username);
-        } catch (err) {
-            Context.reply("Errore nella rimozione del credito.");
-        } finally {
-            const Users = await queries.getUsers(Context.from.id);
-            var user = Users.find(user => user.id == Context.session.__scenes.state.id);
-            Context.reply(`Credito dell'utente dopo la rimozione: ${user.balance}`);
+        if (helpers.hasPassedAdminChecks()) {
+            // #PROBLEM01
+            try {
+                await queries.removeUserCredit(Context.session.__scenes.state.id, Context.message.text, Context.from.username);
+            } catch (err) {
+                Context.reply("Errore nella rimozione del credito.");
+            } finally {
+                const Users = await queries.getUsers(Context.from.id);
+                var user = Users.find(user => user.id == Context.session.__scenes.state.id);
+                Context.reply(`Credito dell'utente dopo la rimozione: ${user.balance}`);
+            }
         }
         return Context.scene.leave();
     }
@@ -281,12 +314,15 @@ const broadcastScene = new Scenes.WizardScene(
             await Context.reply("Operazione annullata.");
             return Context.scene.leave();
         }
-        try {
-            await queries.broadcastMessage(Context.message.text, Context.from.username);
-        } catch (err) {
-            Context.reply("Errore nell'invio del messaggio.");
-        } finally {
-            await Context.reply("Messaggio mandato! Dovresti vederlo anche te.");
+        if (helpers.hasPassedAdminChecks()) {
+            // #PROBLEM01
+            try {
+                await queries.broadcastMessage(Context.message.text, Context.from.username);
+            } catch (err) {
+                Context.reply("Errore nell'invio del messaggio.");
+            } finally {
+                await Context.reply("Messaggio mandato! Dovresti vederlo anche te.");
+            }
         }
         return Context.scene.leave();
     }

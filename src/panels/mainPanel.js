@@ -1,8 +1,9 @@
 const {Markup} = require('telegraf');
+const helpers = require("../helpers")
 const queries = require('../config/database/dbQueries');
 
 const start = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
+    if (!helpers.isBanned) return
 
     if (!user) {
         await queries.initializeUser(Context.chat.id);
@@ -17,8 +18,7 @@ const start = async (Context) => {
 };
 
 const main = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return;
+    if (!helpers.isBanned) return
 
     const config = await queries.getConfig(Context.from.id);
 
@@ -38,8 +38,7 @@ const main = async (Context) => {
 };
 
 const products = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return;
+    if (!helpers.isBanned) return
 
     const config = await queries.getConfig(Context.from.id);
 
@@ -69,8 +68,7 @@ const products = async (Context) => {
 };
 
 const account = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return;
+    if (!helpers.isBanned) return
 
     const config = await queries.getConfig(Context.from.id);
     await Context.editMessageText(`${(user.admin) ? "🔱 <b>Amministratore</b>\n" : ""}👤 <b>Username</b> <code>${Context.chat.username}</code>
@@ -86,8 +84,7 @@ const account = async (Context) => {
 };
 
 const info = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return;
+    if (!helpers.isBanned) return
 
     await Context.editMessageText("*🤖 Creato da ||travexyz|| con tanto ||❤️|| in nodejs*", {parse_mode: 'MarkdownV2'});
     await Context.editMessageReplyMarkup({
@@ -99,9 +96,7 @@ const info = async (Context) => {
 };
 
 const panel = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return;
-    if (!user.admin) return;
+    if (!helpers.hasPassedAdminChecks()) return;
 
     await Context.editMessageText(`<b>🛠️ Pannello Amministratori</b>`, {parse_mode: 'HTML'});
     let markup = {
