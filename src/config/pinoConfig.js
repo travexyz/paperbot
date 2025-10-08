@@ -1,4 +1,4 @@
-// src/config/pinoConfig.js
+// src/settings/pinoConfig.js
 // Pino console logger configuration
 const pino = require('pino');
 

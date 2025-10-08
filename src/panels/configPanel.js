@@ -1,32 +1,13 @@
-const {Markup} = require('telegraf');
+const { Markup } = require('telegraf');
 const helpers = require("../helpers")
 const queries = require("../config/database/dbQueries");
 
-const broadcast = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+const settings = async (Context) => {
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
-    await Context.editMessageText(`<b>Sei sicuro di voler mandare un messaggio a tutti gli utenti e admin del bot?</b>`, {parse_mode: 'HTML'});
-    let markup = {
-        inline_keyboard: [
-            [Markup.button.callback("✅", `dobroadcast`), Markup.button.callback("❌", "panel")]
-        ]
-    };
+    const settings = await queries.getSettings();
 
-    await Context.editMessageReplyMarkup(markup);
-}
-
-const dobroadcast = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
-
-    await Context.scene.enter("broadcast");
-}
-
-const config = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
-
-    const config = await queries.getConfig(Context.from.id);
-
-    await Context.editMessageText(`Nome attuale: <code>${config.shopname}</code>\nValuta: <code>${config.currency}</code>\n\n<b>❓ Cosa vuoi fare</b>`, {parse_mode: 'HTML'});
+    await Context.editMessageText(`Nome attuale: <code>${settings['shop_name']}</code>\nValuta: <code>${settings.currency}</code>\n\n<b>❓ Cosa vuoi fare</b>`, { parse_mode: 'HTML' });
     await Context.editMessageReplyMarkup({
         inline_keyboard: [
             [Markup.button.callback("Cambia nome shop", "editshopname")],
@@ -37,17 +18,37 @@ const config = async (Context) => {
     });
 }
 
+const broadcast = async (Context) => {
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
+
+    await Context.editMessageText(`<b>Sei sicuro di voler mandare un messaggio a tutti gli utenti e admin del bot?</b>`, { parse_mode: 'HTML' });
+    let markup = {
+        inline_keyboard: [
+            [Markup.button.callback("✅", `dobroadcast`), Markup.button.callback("❌", "panel")]
+        ]
+    };
+
+    await Context.editMessageReplyMarkup(markup);
+}
+
+const dobroadcast = async (Context) => {
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
+
+    await Context.scene.enter("broadcast");
+}
+
+
 const editshopname = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     await Context.scene.enter("editshopname");
 }
 
 const currency = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
-    const config = await queries.getConfig();
-    await Context.editMessageText(`La valuta corrente è: <code>${config.currency}</code>\nChe valuta vuoi usare?`, {parse_mode: 'HTML'});
+    const settings = await queries.getSettings();
+    await Context.editMessageText(`La valuta corrente è: <code>${settings.currency}</code>\nChe valuta vuoi usare?`, { parse_mode: 'HTML' });
 
     await Context.editMessageReplyMarkup({
         inline_keyboard: [
@@ -58,10 +59,10 @@ const currency = async (Context) => {
 }
 
 const euro = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
     await queries.updateCurrency('€', Context.from.username);
 
-    await Context.editMessageText(`<b>Valuta impostata ad euro €!</b>`, {parse_mode: 'HTML'});
+    await Context.editMessageText(`<b>Valuta impostata ad euro €!</b>`, { parse_mode: 'HTML' });
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("↩️ Indietro", "currency")]
@@ -71,11 +72,11 @@ const euro = async (Context) => {
 }
 
 const dollar = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     await queries.updateCurrency('$', Context.from.username);
 
-    await Context.editMessageText(`<b>Valuta impostata a dollari $!</b>`, {parse_mode: 'HTML'});
+    await Context.editMessageText(`<b>Valuta impostata a dollari $!</b>`, { parse_mode: 'HTML' });
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("↩️ Indietro", "currency")]
@@ -85,11 +86,11 @@ const dollar = async (Context) => {
 }
 
 const yen = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     await queries.updateCurrency('¥', Context.from.username);
 
-    await Context.editMessageText(`<b>Valuta impostata a yen ¥!</b>`, {parse_mode: 'HTML'});
+    await Context.editMessageText(`<b>Valuta impostata a yen ¥!</b>`, { parse_mode: 'HTML' });
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("↩️ Indietro", "currency")]
@@ -99,11 +100,11 @@ const yen = async (Context) => {
 }
 
 const pound = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     await queries.updateCurrency('£', Context.from.username);
 
-    await Context.editMessageText(`<b>Valuta impostata a sterline £!</b>`, {parse_mode: 'HTML'});
+    await Context.editMessageText(`<b>Valuta impostata a sterline £!</b>`, { parse_mode: 'HTML' });
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("↩️ Indietro", "currency")]
@@ -112,4 +113,4 @@ const pound = async (Context) => {
     await Context.editMessageReplyMarkup(markup);
 }
 
-module.exports = {broadcast, dobroadcast, config, editshopname, currency, euro, dollar, yen, pound}
+module.exports = { broadcast, dobroadcast, settings, editshopname, currency, euro, dollar, yen, pound }

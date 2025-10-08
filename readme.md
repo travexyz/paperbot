@@ -8,7 +8,7 @@ Semplice shop-bot per Telegram.
 ![main](./images/main_panel.png)
 
 ### Pannello dei prodotti
-![products](./images/products_panel.png)
+![product](./images/product_panel.png)
 
 ### Pannello per amministratori
 ![main](./images/admin_panel.png)

@@ -30,7 +30,7 @@ const addProductScene = new Scenes.WizardScene(
         Context.reply("Vuoi nascondere o mostrare il prodotto nella lista? 0 nascondi, 1 mostra");
         return Context.wizard.next();
     }, async (Context) => {
-        if (await helpers.hasAdministratorAccess(Context)) {
+        if (await helpers.hasAdministratorAccess(Context.from.id)) {
             Context.wizard.state.productInfo.visible = (Context.message.text === "1");
             const { name, price, stock, visible } = Context.wizard.state.productInfo;
             try {
@@ -54,7 +54,7 @@ const editNameScene = new Scenes.WizardScene(
             Context.reply("Operazione annullata.");
             return Context.scene.leave();
         }
-        if (await helpers.hasAdministratorAccess(Context)) {
+        if (await helpers.hasAdministratorAccess(Context.from.id)) {
             try {
                 await queries.updateProductName(Context.session.__scenes.state.productId, Context.message.text, Context.from.username);
                 Context.reply(`Modificato nome del prodotto in ${Context.message.text}`);
@@ -76,7 +76,7 @@ const editPriceScene = new Scenes.WizardScene(
             Context.reply("Operazione annullata.");
             return Context.scene.leave();
         }
-        if (await helpers.hasAdministratorAccess(Context)) {
+        if (await helpers.hasAdministratorAccess(Context.from.id)) {
             try {
                 await queries.updateProductPrice(Context.session.__scenes.state.productId, Context.message.text, Context.from.username);
                 Context.reply(`Modificato prezzo del prodotto in ${Context.message.text}`);
@@ -98,7 +98,7 @@ const editStockScene = new Scenes.WizardScene(
             Context.reply("Operazione annullata.");
             return Context.scene.leave();
         }
-        if (await helpers.hasAdministratorAccess(Context)) {
+        if (await helpers.hasAdministratorAccess(Context.from.id)) {
             try {
                 await queries.updateProductStock(Context.session.__scenes.state.productId, Context.message.text, Context.from.username);
                 Context.reply(`Modificata quantità del prodotto in ${Context.message.text}`);
@@ -132,7 +132,7 @@ const addAdminScene = new Scenes.WizardScene(
         return Context.wizard.next();
     }, async (Context) => {
         if (Context.message.text === "1") {
-            if (await helpers.hasAdministratorAccess(Context)) {
+            if (await helpers.hasAdministratorAccess(Context.from.id)) {
                 try {
                     await queries.addAdmin(Context.wizard.state.id, Context.from.username);
                     Context.reply(`Utente aggiunto alla lista degli amministratori!`);
@@ -157,7 +157,7 @@ const editMotdScene = new Scenes.WizardScene(
             Context.reply("Operazione annullata.");
             return Context.scene.leave();
         }
-        if (await helpers.hasAdministratorAccess(Context)) {
+        if (await helpers.hasAdministratorAccess(Context.from.id)) {
             try {
                 await queries.updateMotd(Context.message.text, Context.from.username);
                 Context.reply(`Nuovo Messaggio del Giorno impostato!`);
@@ -179,7 +179,7 @@ const editShopNameScene = new Scenes.WizardScene(
             Context.reply("Operazione annullata.");
             return Context.scene.leave();
         }
-        if (await helpers.hasAdministratorAccess(Context)) {
+        if (await helpers.hasAdministratorAccess(Context.from.id)) {
             try {
                 await queries.updateShopName(Context.message.text, Context.from.username);
                 Context.reply(`Nuovo nome shop impostato!`);
@@ -199,10 +199,10 @@ const setCreditScene = new Scenes.WizardScene(
         var user = Users.find(user => user.id === parseInt(Context.session.__scenes.state.id));
 
         var username;
-        await client.telegram.getChat(user.telegramID)
+        await client.telegram.getChat(user.telegram_id)
             .then(chat => username = chat.username);
 
-        Context.reply(`Inserisci il credito da impostare all'utente ${username} ID: ${user.telegramID} ("cancel" per annullare):`);
+        Context.reply(`Inserisci il credito da impostare all'utente ${username} ID: ${user.telegram_id} ("cancel" per annullare):`);
 
         return Context.wizard.next();
 
@@ -212,7 +212,7 @@ const setCreditScene = new Scenes.WizardScene(
             return Context.scene.leave();
         }
         var credit = Context.message.text;
-        if (await helpers.hasAdministratorAccess(Context)) {
+        if (await helpers.hasAdministratorAccess(Context.from.id)) {
             try {
                 await queries.setUserCredit(Context.session.__scenes.state.id, credit, Context.from.username);
                 Context.reply(`Credito dell'utente impostato a ${credit}`);
@@ -230,17 +230,17 @@ const addCreditScene = new Scenes.WizardScene(
         const Users = await queries.getUsers(Context.from.id);
         var user = Users.find(user => user.id == Context.session.__scenes.state.id);
         var username;
-        await client.telegram.getChat(user.telegramID)
+        await client.telegram.getChat(user.telegram_id)
             .then(chat => username = chat.username);
 
-        Context.reply(`Inserisci il credito da aggiungere all'utente ${username} ID: ${user.telegramID} ("cancel" per annullare):`);
+        Context.reply(`Inserisci il credito da aggiungere all'utente ${username} ID: ${user.telegram_id} ("cancel" per annullare):`);
         return Context.wizard.next();
     }, async (Context) => {
         if (Context.message.text === "cancel") {
             Context.reply("Operazione annullata.");
             return Context.scene.leave();
         }
-        if (await helpers.hasAdministratorAccess(Context)) {
+        if (await helpers.hasAdministratorAccess(Context.from.id)) {
             try {
                 await queries.addUserCredit(Context.session.__scenes.state.id, Context.message.text, Context.from.username);
                 const Users = await queries.getUsers(Context.from.id);
@@ -260,17 +260,17 @@ const rmCreditScene = new Scenes.WizardScene(
         const Users = await queries.getUsers(Context.from.id);
         var user = Users.find(user => user.id == Context.session.__scenes.state.id);
         var username;
-        await client.telegram.getChat(user.telegramID)
+        await client.telegram.getChat(user.telegram_id)
             .then(chat => username = chat.username);
 
-        Context.reply(`Inserisci il credito da rimuovere all'utente ${username} ID: ${user.telegramID} ("cancel" per annullare):`);
+        Context.reply(`Inserisci il credito da rimuovere all'utente ${username} ID: ${user.telegram_id} ("cancel" per annullare):`);
         return Context.wizard.next();
     }, async (Context) => {
         if (Context.message.text === "cancel") {
             Context.reply("Operazione annullata.");
             return Context.scene.leave();
         }
-        if (await helpers.hasAdministratorAccess(Context)) {
+        if (await helpers.hasAdministratorAccess(Context.from.id)) {
             try {
                 await queries.removeUserCredit(Context.session.__scenes.state.id, Context.message.text, Context.from.username);
                 const Users = await queries.getUsers(Context.from.id);
@@ -294,7 +294,7 @@ const broadcastScene = new Scenes.WizardScene(
             await Context.reply("Operazione annullata.");
             return Context.scene.leave();
         }
-        if (await helpers.hasAdministratorAccess(Context)) {
+        if (await helpers.hasAdministratorAccess(Context.from.id)) {
             try {
                 await queries.broadcastMessage(Context.message.text, Context.from.username);
                 await Context.reply("Messaggio mandato! Dovresti vederlo anche te.");

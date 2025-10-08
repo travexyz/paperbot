@@ -3,20 +3,20 @@ const helpers = require("../helpers")
 const queries = require("../config/database/dbQueries");
 
 const addproduct = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     await Context.scene.enter("addproduct")
 }
 
 const rmproduct = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     await Context.editMessageText(`<b>Seleziona il prodotto che vuoi rimuovere:</b>`, {parse_mode: 'HTML'})
 
     let keyboard = []
-    var Products = await queries.getProducts(Context.from.username)
-    for (const item of Products) {
-        keyboard.push([Markup.button.callback(item.name, `rmproduct-${item.id}`)])
+    var products = await queries.getProducts()
+    for (const item of products) {
+        keyboard.push([Markup.button.callback(item.name, `rmproduct-${item['product_id']}`)])
     }
 
     keyboard.push([Markup.button.callback("↩️ Indietro", "panel")])
@@ -28,22 +28,22 @@ const rmproduct = async (Context) => {
 }
 
 const rmproductconfirm = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     let id = Context.match[0].split("-")[1]
     var product = await queries.getProductById(id)
 
-    await Context.editMessageText(`<b>Sei sicuro che vuoi eliminare il prodotto?\n✍️ Nome: <code>${product.name}</code>\n💵 Prezzo: <code>${product.price}</code>\n🎰 Stock: <code>${product.stock}</code>\n👁️‍🗨️ Visibiltà: <code>${(product.visible ? "mostrato" : "nascosto")}</code></b>`, {parse_mode: 'HTML'})
+    await Context.editMessageText(`<b>Sei sicuro che vuoi eliminare il prodotto?\n✍️ Nome: <code>${product.name}</code>\n💵 Prezzo: <code>${product.price}</code>\n🎰 Stock: <code>${product.stock}</code>\n👁️‍🗨️ Visibiltà: <code>${(product['is_visible'] ? "mostrato" : "nascosto")}</code></b>`, {parse_mode: 'HTML'})
     let markup = {
         inline_keyboard: [
-            [Markup.button.callback("✅", `productrm-${product.id}`), Markup.button.callback("❌", "rmproduct")]
+            [Markup.button.callback("✅", `productrm-${product['product_id']}`), Markup.button.callback("❌", "rmproduct")]
         ]
     }
     await Context.editMessageReplyMarkup(markup)
 }
 
 const productrm = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     let id = Context.match[0].split("-")[1]
     await queries.deleteProduct(id, Context.from.username)
@@ -58,13 +58,13 @@ const productrm = async (Context) => {
 }
 
 const editproduct = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     await Context.editMessageText(`<b>Seleziona il prodotto che vuoi modificare:</b>`, {parse_mode: 'HTML'})
     let keyboard = []
-    var Products = await queries.getProducts(Context.from.username)
-    for (const item of Products) {
-        keyboard.push([Markup.button.callback(item.name, `editproduct-${item.id}`)])
+    var products = await queries.getProducts()
+    for (const item of products) {
+        keyboard.push([Markup.button.callback(item.name, `editproduct-${item['product_id']}`)])
     }
 
     keyboard.push([Markup.button.callback("↩️ Indietro", "panel")])
@@ -76,17 +76,17 @@ const editproduct = async (Context) => {
 }
 
 const editproductconfirm = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     let id = Context.match[0].split("-")[1]
     var product = await queries.getProductById(id)
 
-    await Context.editMessageText(`<b>Cosa vuoi cambiare del prodotto?\n✍️ Nome: <code>${product.name}</code>\n💵 Prezzo: <code>${product.price}</code>\n🎰 Stock: <code>${product.stock}</code>\n👁️‍🗨️ Visibiltà: <code>${(product.visible ? "mostrato" : "nascosto")}</code></b>`, {parse_mode: 'HTML'})
+    await Context.editMessageText(`<b>Cosa vuoi cambiare del prodotto?\n✍️ Nome: <code>${product.name}</code>\n💵 Prezzo: <code>${product.price}</code>\n🎰 Stock: <code>${product.stock}</code>\n👁️‍🗨️ Visibiltà: <code>${(product['is_visible'] ? "mostrato" : "nascosto")}</code></b>`, {parse_mode: 'HTML'})
     let markup = {
         inline_keyboard: [
-            [Markup.button.callback("✍️ Nome", `changename-${product.id}`), Markup.button.callback("💵 Prezzo", `changeprice-${product.id}`), Markup.button.callback("🎰 Stock", `changestock-${product.id}`)],
-            [Markup.button.callback("👁️‍🗨️ Visibilita", `changevis-${product.id}`)],
-            [Markup.button.callback("❌ Rimuovi", `rmproduct-${product.id}`)],
+            [Markup.button.callback("✍️ Nome", `changename-${product['product_id']}`), Markup.button.callback("💵 Prezzo", `changeprice-${product['product_id']}`), Markup.button.callback("🎰 Stock", `changestock-${product['product_id']}`)],
+            [Markup.button.callback("👁️‍🗨️ Visibilita", `changevis-${product['product_id']}`)],
+            [Markup.button.callback("❌ Rimuovi", `rmproduct-${product['product_id']}`)],
             [Markup.button.callback("↩️ Indietro", "editproduct")]
         ]
     }
@@ -95,7 +95,7 @@ const editproductconfirm = async (Context) => {
 }
 
 const changename = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     let id = Context.match[0].split("-")[1]
 
@@ -103,7 +103,7 @@ const changename = async (Context) => {
 }
 
 const changeprice = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     let id = Context.match[0].split("-")[1]
 
@@ -111,7 +111,7 @@ const changeprice = async (Context) => {
 }
 
 const changestock = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     let id = Context.match[0].split("-")[1]
 
@@ -119,15 +119,15 @@ const changestock = async (Context) => {
 }
 
 const changevis = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     let id = Context.match[0].split("-")[1]
     var product = await queries.getProductById(id);
 
-    await Context.editMessageText(`<b>Vuoi nascondere o mostrare il prodotto <code>${product.name}</code>? (adesso è ${(product.visible) ? "mostrato" : "nascosto"}</b>`, {parse_mode: 'HTML'})
+    await Context.editMessageText(`<b>Vuoi nascondere o mostrare il prodotto <code>${product.name}</code>?\nAdesso è ${(product['is_visible']) ? "mostrato" : "nascosto"}</b>`, {parse_mode: 'HTML'})
     let markup = {
         inline_keyboard: [
-            [Markup.button.callback("Nascondi", `hide-${product.id}`), Markup.button.callback("Mostra", `show-${product.id}`)]
+            [Markup.button.callback("Nascondi", `hide-${product['product_id']}`), Markup.button.callback("Mostra", `show-${product['product_id']}`)]
         ]
     }
 
@@ -135,7 +135,7 @@ const changevis = async (Context) => {
 }
 
 const hide = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     let id = Context.match[0].split("-")[1]
     await queries.updateProductVisibility(id, false, Context.from.username)
@@ -151,7 +151,7 @@ const hide = async (Context) => {
 }
 
 const show = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     let id = Context.match[0].split("-")[1]
     await queries.updateProductVisibility(id, true, Context.from.username)

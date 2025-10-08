@@ -1,54 +1,54 @@
-const {Markup} = require('telegraf');
+const { Markup } = require('telegraf');
 const helpers = require("../helpers")
 const queries = require('../config/database/dbQueries');
 
 const start = async (Context) => {
-    if (!await helpers.hasUserAccess(Context)) return
-    
+    if (!await helpers.hasUserAccess(Context.from.id)) return
+
     const user = await queries.getUserByTelegramId(Context.from.id);
-    if (!user) {
+    if (!user['telegram_id']) {
         await queries.initializeUser(Context.chat.id);
-    } else if (user.banned) return;
+    }
 
-    const config = await queries.getConfig(Context.from.id);
+    const settings = await queries.getSettings();
 
-    Context.reply(`*${config.shopname} Bot — Creato da ||travexyz||*`, {
+    Context.reply(`*${settings.shop_name} Bot — Creato da ||travexyz||*`, {
         parse_mode: "MarkdownV2",
         ...Markup.inlineKeyboard([[Markup.button.callback("👽 Entra", "main")]])
     });
 };
 
 const main = async (Context) => {
-    if (!await helpers.hasUserAccess(Context)) return
+    if (!await helpers.hasUserAccess(Context.from.id)) return
 
-    const config = await queries.getConfig(Context.from.id);
+    const settings = await queries.getSettings();
 
-    await Context.editMessageText(`😎 Ciao <b>${(Context.from.username) ? Context.from.username : Context.from.first_name}</b>, benvenuto in <b>${config.shopname}</b>!\n\n${(config.motd !== null) ? `<code>${config.motd}</code>` : `${new Date().toLocaleDateString()}`}`, {parse_mode: 'HTML'});
+    await Context.editMessageText(`😎 Ciao <b>${(Context.from.username) ? Context.from.username : Context.from.first_name}</b>, benvenuto in <b>${settings['shop_name']}</b>!\n\n${(settings['motd'] !== null) ? `<code>${settings['motd']}</code>` : `${new Date().toLocaleDateString()}`}`, { parse_mode: 'HTML' });
 
     let keyboard = {
         inline_keyboard: [
-            [Markup.button.callback("📚 Prodotti", "products")],
+            [Markup.button.callback("📚 Prodotti", "product")],
             [Markup.button.callback("🪪 Account", "account"), Markup.button.callback("ℹ️ Info", "info")],
         ],
     }
 
-    if (await await helpers.hasAdministratorAccess(Context))
+    if (await await helpers.hasAdministratorAccess(Context.from.id))
         keyboard.inline_keyboard.push([Markup.button.callback("🛠️ Pannello Amministratori", "panel")])
 
     await Context.editMessageReplyMarkup(keyboard);
 };
 
-const products = async (Context) => {
-    if (!await helpers.hasUserAccess(Context)) return
+const product = async (Context) => {
+    if (!await helpers.hasUserAccess(Context.from.id)) return
 
     const user = await queries.getUserByTelegramId(Context.from.id);
-    const config = await queries.getConfig(Context.from.id);
+    const settings = await queries.getSettings();
 
-    let message = `📚 <b>Prodotti di ${config.shopname}\n</b>💰 <b>Grana:</b> <code>${user.balance}${config.currency}</code>\n\n`;
+    let message = `📚 <b>Prodotti di ${settings['shop_name']}\n</b>💰 <b>Saldo:</b> <code>${user.balance}${settings.currency}</code>\n\n`;
 
-    const Products = await queries.getProducts(Context.from.id);
-    for (const item of Products) {
-        if (item.hidden && !user.admin) continue;
+    const products = await queries.getProducts();
+    for (const item of products) {
+        if (item.hidden && !user['is_admin']) continue;
 
         let stock = item.stock;
         if (stock === 0)
@@ -56,12 +56,14 @@ const products = async (Context) => {
         else if (stock === -1)
             stock = "UNLIMITED";
 
-        message += `<b>‼️ ${item.name}</b>\n💸 Prezzo: <code>${item.price}${config.currency}</code>\n🎰 Stock: <code>${stock}</code>\n`;
-        if (user.admin)
-            message += (item.visible) ? "<b>🔓 Visibile</b>\n\n" : "<b>🔒 Non visibile</b>\n\n"
+        if (item['is_visible'] || user['is_admin'])
+            message += `<b>‼️ ${item.name}</b>\n💸 Prezzo: <code>${item.price}${settings.currency}</code>\n🎰 Stock: <code>${stock}</code>\n`;
+
+        if (user['is_admin'])
+            message += (item['is_visible']) ? "<b>🔓 Visibile agli utenti</b>\n\n" : "<b>🔒 Non visibile agli utenti</b>\n\n"
     }
 
-    await Context.editMessageText(message, {parse_mode: 'HTML'});
+    await Context.editMessageText(message, { parse_mode: 'HTML' });
     await Context.editMessageReplyMarkup({
         inline_keyboard: [
             [Markup.button.url("💫 Acquista", "tg://user?id=304506948"), Markup.button.callback("↩️ Indietro", "main")]
@@ -70,15 +72,15 @@ const products = async (Context) => {
 };
 
 const account = async (Context) => {
-    if (!await helpers.hasUserAccess(Context)) return
+    if (!await helpers.hasUserAccess(Context.from.id)) return
 
     const user = await queries.getUserByTelegramId(Context.from.id);
 
-    const config = await queries.getConfig(Context.from.id);
-    await Context.editMessageText(`${(user.admin) ? "🔱 <b>Amministratore</b>\n" : ""}👤 <b>Username</b> <code>${(Context.chat.username) ? Context.from.username : "N/A"}</code>
+    const settings = await queries.getSettings();
+    await Context.editMessageText(`${(user['is_admin']) ? "🔱 <b>Amministratore</b>\n" : ""}👤 <b>Username</b> <code>${(Context.chat.username) ? Context.from.username : "N/A"}</code>
 🆔 <b>ID:</b> <code>${Context.chat.id}</code>
-💵 <b>Grana:</b> <code>${user.balance}${config.currency}</code>
-📏 <b>Pisello:</b> <code>${user.pisello}cm ${(user.pisello > 10) ? "😱" : "😮‍💨"}</code>`, {parse_mode: 'HTML'});
+💵 <b>Saldo:</b> <code>${user.balance}${settings.currency}</code>
+📏 <b>Pisello:</b> <code>${user['pisello_length']}cm ${(user['pisello_length'] > 15) ? "😱" : "😮‍💨"}</code>`, { parse_mode: 'HTML' });
 
     await Context.editMessageReplyMarkup({
         inline_keyboard: [
@@ -88,9 +90,9 @@ const account = async (Context) => {
 };
 
 const info = async (Context) => {
-    if (!await helpers.hasUserAccess(Context)) return
+    if (!await helpers.hasUserAccess(Context.from.id)) return
 
-    await Context.editMessageText("*🤖 Creato da ||travexyz|| con ||❤️||*", {parse_mode: 'MarkdownV2'});
+    await Context.editMessageText("*🤖 Creato da ||travexyz|| con ||❤️||*", { parse_mode: 'MarkdownV2' });
     await Context.editMessageReplyMarkup({
         inline_keyboard: [
             [Markup.button.url("Contatta Sviluppatore", "tg://user?id=304506948")],
@@ -100,9 +102,9 @@ const info = async (Context) => {
 };
 
 const panel = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
-    await Context.editMessageText(`<b>🛠️ Pannello Amministratori</b>`, {parse_mode: 'HTML'});
+    await Context.editMessageText(`<b>🛠️ Pannello Amministratori</b>`, { parse_mode: 'HTML' });
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("➕ Aggiungi prodotto", "addproduct"), Markup.button.callback("❌ Rimuovi prodotto", "rmproduct")],
@@ -110,7 +112,7 @@ const panel = async (Context) => {
             [Markup.button.callback("👥 Gestisci utenti", "manageusers")],
             [Markup.button.callback("📣 Trasmetti messaggio", "broadcast")],
             [Markup.button.callback("🧑‍⚖️ Gestisci admin", "manageadmins")],
-            [Markup.button.callback("📝 Configurazione bot", "config")],
+            [Markup.button.callback("📝 Configurazione bot", "settings")],
             [Markup.button.callback("↩️ Indietro", "main")]
         ]
     };
@@ -118,4 +120,4 @@ const panel = async (Context) => {
     await Context.editMessageReplyMarkup(markup);
 };
 
-module.exports = {start, main, products, account, info, panel};
+module.exports = { start, main, product, account, info, panel };

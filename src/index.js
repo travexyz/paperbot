@@ -21,12 +21,18 @@ const client = require('./config/clientConfig');
 client.use(session());
 client.use(new Scenes.Stage([scenes.addProductScene, scenes.editNameScene, scenes.editPriceScene, scenes.editStockScene, scenes.addAdminScene, scenes.editMotdScene, scenes.setCreditScene, scenes.addCreditScene, scenes.rmCreditScene, scenes.editShopNameScene, scenes.broadcastScene]));
 
+// client.on('callback_query', (ctx) => {
+//     logger.debug('callback received:', ctx.callbackQuery.data)
+//     // non dimenticare: rispondi alla callback per togliere la "rotella" lato utente
+//     ctx.answerCbQuery().catch(()=>{})
+// })
+
 // "/start" command handler
 client.start(main_actions.start)
 
 // Main panel actions
 client.action("main", main_actions.main)
-client.action("products", main_actions.products)
+client.action("product", main_actions.product)
 client.action("account", main_actions.account)
 client.action("info", main_actions.info)
 client.action("panel", main_actions.panel)
@@ -67,8 +73,8 @@ client.action(/^banrm-\d+/, user_actions.banrm)
 client.action("broadcast", config_actions.broadcast)
 client.action("dobroadcast", config_actions.dobroadcast)
 
-// Config panel actions
-client.action("config", config_actions.config)
+// settings panel actions
+client.action("settings", config_actions.settings)
 client.action("editshopname", config_actions.editshopname)
 client.action("currency", config_actions.currency)
 client.action("euro", config_actions.euro)

@@ -1,18 +1,14 @@
 const queries = require("./config/database/dbQueries");
 
-const hasUserAccess = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.from.id);
-    if (user.banned) return false
-
-    const config = await queries.getConfig();
-    if (config.shopLockdown) return false
-    else return true
+const hasUserAccess = async (telegram_id) => {
+    if(await queries.getUserBanStatus(telegram_id)) return false;
+    if (await queries.getShopLockStatus()) return false;
+    else return true;
 }
 
-const hasAdministratorAccess = async (Context) => {
-    const user = await queries.getUserByTelegramId(Context.chat.id);
-    if (user.banned) return false
-    else if (!user.admin) return false
+const hasAdministratorAccess = async (telegram_id) => {
+    if (await queries.getUserBanStatus(telegram_id)) return false;
+    if (!await queries.getUserAdminStatus(telegram_id)) return false;
     else return true
 }
 

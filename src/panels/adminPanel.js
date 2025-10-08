@@ -4,14 +4,14 @@ const helpers = require("../helpers")
 const {getUsername} = require('./userPanel')
 
 const manageadmins = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     const databaseUsers = await queries.getUsers();
 
     let message = "<b>👥 Lista amministratori:</b>\n"
     for (const user of databaseUsers) {
         let username = await getUsername(user);
-        message += `- <code>${username} (${user.telegramID})</code>\n`;
+        message += `- <code>${username} (${user.telegram_id})</code>\n`;
     }
 
     message += "\n<b>‼️ Seleziona un amministratore per gestirlo:</b>"
@@ -31,7 +31,7 @@ const manageadmins = async (Context) => {
 }
 
 const addadmin = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     await Context.editMessageText(`<b>Sei sicuro di voler aggiungere un nuovo amministratore?</b>`, {parse_mode: 'HTML'})
     let markup = {
@@ -43,20 +43,20 @@ const addadmin = async (Context) => {
 }
 
 const adminadd = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     await Context.scene.enter("addadmin")
 }
 
 const rmadminconfirm = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     let id = Context.match[0].split("-")[1]
-    const target_user = await queries.getUserById(id, Context.from.username)
+    const target_user = await queries.getUserByDatabaseId(id)
 
     let username = await getUsername(target_user);
 
-    await Context.editMessageText(`<b>Sei sicuro che vuoi rimuovere <code>${username} (${target_user.telegramID})</code> dagli amministratori?</b>`, {parse_mode: 'HTML'})
+    await Context.editMessageText(`<b>Sei sicuro che vuoi rimuovere <code>${username} (${target_user.telegram_id})</code> dagli amministratori?</b>`, {parse_mode: 'HTML'})
     let markup = {
         inline_keyboard: [
             [Markup.button.callback("✅", `adminrm-${target_user.id}`), Markup.button.callback("❌", `manageuser-${target_user.id}`)]
@@ -66,7 +66,7 @@ const rmadminconfirm = async (Context) => {
 }
 
 const adminrm = async (Context) => {
-    if (!await helpers.hasAdministratorAccess(Context)) return;
+    if (!await helpers.hasAdministratorAccess(Context.from.id)) return;
 
     let id = Context.match[0].split("-")[1]
     await queries.removeAdmin(id, Context.from.id)
