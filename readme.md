@@ -1,4 +1,7 @@
 # Paperbot
+> [!NOTE]
+> Mainly created for educational purposes, this served as a project where I could apply some of stuff whilst I was learning it
+---
 Semplice shop-bot per Telegram.
 - Gestione dinamica prodotti e utenti.
 - Completo pannello amministrativo in-line.
